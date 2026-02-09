@@ -22,12 +22,20 @@ const FrameEditor = () => {
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [thumbnailPreview, setThumbnailPreview] = useState(editingFrame?.thumbnail_url || null);
 
-    // Layout Config: Array of rectangles { id, x, y, width, height }
-    // We store coordinates relative to the ORIGINAL image size aspect ratio logic
-    // But for simplicity in this editor, we'll store specific percentages or pixel values relative to a fixed canvas?
-    // Let's store percentages (%) to be responsive!
-    const [photoSlots, setPhotoSlots] = useState(editingFrame?.layout_config || []);
+    // Layout Config: Object { a: [], b: [] }
+    // Backwards compatibility: if array, assign to 'a'
+    const [layouts, setLayouts] = useState(() => {
+        const config = editingFrame?.layout_config;
+        if (Array.isArray(config)) return { a: config, b: [] };
+        if (config && typeof config === 'object') return { a: config.a || [], b: config.b || [] };
+        return { a: [], b: [] };
+    });
+
+    const [activeLayout, setActiveLayout] = useState('a'); // 'a' or 'b'
     const [selectedSlotId, setSelectedSlotId] = useState(null);
+
+    // Derived state for current slots
+    const photoSlots = layouts[activeLayout];
 
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
@@ -63,24 +71,33 @@ const FrameEditor = () => {
         }
     };
 
+    const updateLayouts = (newSlots) => {
+        setLayouts(prev => ({
+            ...prev,
+            [activeLayout]: newSlots
+        }));
+    };
+
     const addSlot = () => {
         const newSlot = {
             id: Date.now(),
             x: 10,
             y: 10,
-            width: 40, // Increased default from 80% to 40% (better manageable default)
-            height: 30 // Increased default from 20% to 30%
+            width: 40,
+            height: 30
         };
-        setPhotoSlots([...photoSlots, newSlot]);
+        updateLayouts([...photoSlots, newSlot]);
         setSelectedSlotId(newSlot.id);
     };
 
     const updateSlot = (id, updates) => {
-        setPhotoSlots(photoSlots.map(s => s.id === id ? { ...s, ...updates } : s));
+        const newSlots = photoSlots.map(s => s.id === id ? { ...s, ...updates } : s);
+        updateLayouts(newSlots);
     };
 
     const deleteSlot = (id) => {
-        setPhotoSlots(photoSlots.filter(s => s.id !== id));
+        const newSlots = photoSlots.filter(s => s.id !== id);
+        updateLayouts(newSlots);
         setSelectedSlotId(null);
     };
 
@@ -95,7 +112,8 @@ const FrameEditor = () => {
                 style,
                 rarity,
                 artist,
-                layout_config: photoSlots,
+                artist,
+                layout_config: layouts, // Save the full layouts object { a: [...], b: [...] }
                 file: imageFile,
                 thumbnailFile: thumbnailFile,
                 thumbnail_url: thumbnailPreview
@@ -245,12 +263,29 @@ const FrameEditor = () => {
                         </div>
                     </div>
 
-                    <h2 className="font-bold text-green-400 mb-4 border-b border-white/10 pb-2 flex justify-between items-center">
-                        PHOTO SLOTS
-                        <button onClick={addSlot} className="bg-white/10 p-1 rounded hover:bg-white/20 text-xs flex items-center gap-1">
-                            <Plus size={14} /> ADD
+                    <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
+                        <h2 className="font-bold text-green-400">PHOTO SLOTS</h2>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => { setActiveLayout('a'); setSelectedSlotId(null); }}
+                                className={`px-3 py-1 text-xs rounded font-bold transition-colors ${activeLayout === 'a' ? 'bg-yellow-400 text-black' : 'bg-white/10 text-gray-400 hover:bg-white/20'}`}
+                            >
+                                LAYOUT A
+                            </button>
+                            <button
+                                onClick={() => { setActiveLayout('b'); setSelectedSlotId(null); }}
+                                className={`px-3 py-1 text-xs rounded font-bold transition-colors ${activeLayout === 'b' ? 'bg-yellow-400 text-black' : 'bg-white/10 text-gray-400 hover:bg-white/20'}`}
+                            >
+                                LAYOUT B
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end mb-4">
+                        <button onClick={addSlot} className="bg-white/10 p-1.5 rounded hover:bg-white/20 text-xs flex items-center gap-1 w-full justify-center border border-dashed border-white/20 hover:border-yellow-400/50 transition-colors">
+                            <Plus size={14} /> ADD SLOT TO LAYOUT {activeLayout.toUpperCase()}
                         </button>
-                    </h2>
+                    </div>
 
                     {selectedSlotId ? (
                         <div className="bg-white/5 p-4 rounded border border-white/10 space-y-3">

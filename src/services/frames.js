@@ -22,19 +22,34 @@ const uploadFile = async (file, bucket = 'frames') => {
 
 // Create a new frame record
 export const createFrame = async (frameData) => {
-    // 1. Upload Main Image
+    // 1. Upload Main Image (Layout A)
     let imageUrl = frameData.image;
     if (frameData.file) {
         imageUrl = await uploadFile(frameData.file);
     }
 
-    // 2. Upload Thumbnail (if exists)
+    // 2. Upload Layout B Image (if exists)
+    let imageUrlB = null;
+    if (frameData.imageFileB) {
+        imageUrlB = await uploadFile(frameData.imageFileB);
+    }
+
+    // 3. Upload Thumbnail (if exists)
     let thumbnailUrl = null;
     if (frameData.thumbnailFile) {
         thumbnailUrl = await uploadFile(frameData.thumbnailFile);
     }
 
-    // 3. Insert Record
+    // 4. Update layout_config to include the image for B
+    const finalLayoutConfig = { ...frameData.layout_config };
+    if (imageUrlB) {
+        finalLayoutConfig.images = {
+            ...finalLayoutConfig.images,
+            b: imageUrlB
+        };
+    }
+
+    // 5. Insert Record
     const { data, error } = await supabase
         .from('frames')
         .insert([{
@@ -42,7 +57,7 @@ export const createFrame = async (frameData) => {
             image_url: imageUrl,
             thumbnail_url: thumbnailUrl,
             status: frameData.status || 'active',
-            layout_config: frameData.layout_config,
+            layout_config: finalLayoutConfig,
             style: frameData.style || 'Custom',
             rarity: frameData.rarity || 'Common',
             artist: frameData.artist || 'Default',
@@ -57,22 +72,29 @@ export const createFrame = async (frameData) => {
 
 // Update a frame
 export const updateFrame = async (id, updates) => {
-    // Handle File Uploads for Updates (if any)
-    // Note: The caller (FrameEditor) should separate file vs url logic, but we can do it here if we pass files in 'updates'
-
-    // We'll assume 'updates' object might contain files that need uploading
-    // This requires a bit of refactoring if passing raw 'updates' to supabase.update
-    // Better to prepare the 'clean' updates object before calling supabase
-
     const dbUpdates = { ...updates };
 
     // Remove file objects from direct DB update
     delete dbUpdates.file;
+    delete dbUpdates.imageFileB;
     delete dbUpdates.thumbnailFile;
 
-    // If new main file provided
+    // If new main file provided (Layout A)
     if (updates.file) {
         dbUpdates.image_url = await uploadFile(updates.file);
+    }
+
+    // If new Layout B file provided
+    if (updates.imageFileB) {
+        const urlB = await uploadFile(updates.imageFileB);
+        // Deep merge into layout_config
+        dbUpdates.layout_config = {
+            ...dbUpdates.layout_config,
+            images: {
+                ...(dbUpdates.layout_config.images || {}),
+                b: urlB
+            }
+        };
     }
 
     // If new thumbnail file provided
