@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAlert } from '../../context/AlertContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createFrame, updateFrame } from '../../services/frames';
-import { ArrowLeft, Save, Plus, X, Type } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Move, Maximize2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const FrameEditor = () => {
@@ -25,8 +25,18 @@ const FrameEditor = () => {
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [thumbnailPreview, setThumbnailPreview] = useState(editingFrame?.thumbnail_url || null);
 
+    // External URL State — Layout A (for jsDelivr CDN)
+    const isExistingExternalUrl = editingFrame?.image_url && !editingFrame.image_url.includes('supabase.co');
+    const [useExternalUrl, setUseExternalUrl] = useState(isExistingExternalUrl || false);
+    const [externalUrl, setExternalUrl] = useState(isExistingExternalUrl ? editingFrame.image_url : '');
+
+    // External URL State — Layout B
+    const existingBImage = editingFrame?.layout_config?.images?.b;
+    const isExistingExternalUrlB = existingBImage && !existingBImage.includes('supabase.co');
+    const [useExternalUrlB, setUseExternalUrlB] = useState(isExistingExternalUrlB || false);
+    const [externalUrlB, setExternalUrlB] = useState(isExistingExternalUrlB ? existingBImage : '');
+
     // Layout Config: Object { a: [], b: [] }
-    // Backwards compatibility: if array, assign to 'a'
     const [layouts, setLayouts] = useState(() => {
         const config = editingFrame?.layout_config;
         if (Array.isArray(config)) return { a: config, b: [] };
@@ -34,29 +44,23 @@ const FrameEditor = () => {
         return { a: [], b: [] };
     });
 
-    const [activeLayout, setActiveLayout] = useState('a'); // 'a' or 'b'
+    const [activeLayout, setActiveLayout] = useState('a');
     const [selectedSlotId, setSelectedSlotId] = useState(null);
 
-    // Derived state for current slots
     const photoSlots = layouts[activeLayout];
 
-    const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const [uploading, setUploading] = useState(false);
 
-    // Load image to get natural dimensions
-    const [imgDimensions, setImgDimensions] = useState({ w: 0, h: 0 });
-
-    useEffect(() => {
-        const preview = activeLayout === 'b' && imagePreviewB ? imagePreviewB : imagePreview;
-        if (preview) {
-            const img = new Image();
-            img.onload = () => {
-                setImgDimensions({ w: img.width, h: img.height });
-            };
-            img.src = preview;
-        }
-    }, [imagePreview, imagePreviewB, activeLayout]);
+    // Drag state
+    const dragState = useRef({
+        active: false,
+        type: null, // 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br'
+        slotId: null,
+        startMouseX: 0,
+        startMouseY: 0,
+        startSlot: null, // { x, y, width, height }
+    });
 
     const handleFileChange = (e, type = 'image') => {
         const file = e.target.files[0];
@@ -80,35 +84,130 @@ const FrameEditor = () => {
         }
     };
 
-    const updateLayouts = (newSlots) => {
+    const updateLayouts = useCallback((newSlots) => {
         setLayouts(prev => ({
             ...prev,
             [activeLayout]: newSlots
         }));
-    };
+    }, [activeLayout]);
 
     const addSlot = () => {
         const newSlot = {
             id: Date.now(),
             x: 10,
-            y: 10,
+            y: 10 + photoSlots.length * 25,
             width: 40,
-            height: 30
+            height: 20
         };
         updateLayouts([...photoSlots, newSlot]);
         setSelectedSlotId(newSlot.id);
     };
 
-    const updateSlot = (id, updates) => {
-        const newSlots = photoSlots.map(s => s.id === id ? { ...s, ...updates } : s);
-        updateLayouts(newSlots);
-    };
+    const updateSlot = useCallback((id, updates) => {
+        setLayouts(prev => ({
+            ...prev,
+            [activeLayout]: prev[activeLayout].map(s => s.id === id ? { ...s, ...updates } : s)
+        }));
+    }, [activeLayout]);
 
     const deleteSlot = (id) => {
-        const newSlots = photoSlots.filter(s => s.id !== id);
-        updateLayouts(newSlots);
+        updateLayouts(photoSlots.filter(s => s.id !== id));
         setSelectedSlotId(null);
     };
+
+    // --- DRAG & RESIZE LOGIC ---
+    const getContainerRect = () => {
+        if (!containerRef.current) return null;
+        return containerRef.current.getBoundingClientRect();
+    };
+
+    const handlePointerDown = (e, slotId, type = 'move') => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const slot = photoSlots.find(s => s.id === slotId);
+        if (!slot) return;
+
+        setSelectedSlotId(slotId);
+
+        dragState.current = {
+            active: true,
+            type,
+            slotId,
+            startMouseX: e.clientX,
+            startMouseY: e.clientY,
+            startSlot: { ...slot }
+        };
+
+        // Capture pointer for smooth dragging even outside element
+        e.target.setPointerCapture?.(e.pointerId);
+    };
+
+    const handlePointerMove = useCallback((e) => {
+        const ds = dragState.current;
+        if (!ds.active) return;
+
+        const rect = getContainerRect();
+        if (!rect) return;
+
+        const deltaXPct = ((e.clientX - ds.startMouseX) / rect.width) * 100;
+        const deltaYPct = ((e.clientY - ds.startMouseY) / rect.height) * 100;
+
+        const { startSlot, type, slotId } = ds;
+
+        let updates = {};
+
+        if (type === 'move') {
+            updates = {
+                x: Math.round(Math.max(0, Math.min(100 - startSlot.width, startSlot.x + deltaXPct))),
+                y: Math.round(Math.max(0, Math.min(100 - startSlot.height, startSlot.y + deltaYPct)))
+            };
+        } else if (type === 'resize-br') {
+            updates = {
+                width: Math.round(Math.max(5, Math.min(100 - startSlot.x, startSlot.width + deltaXPct))),
+                height: Math.round(Math.max(5, Math.min(100 - startSlot.y, startSlot.height + deltaYPct)))
+            };
+        } else if (type === 'resize-bl') {
+            const newW = Math.round(Math.max(5, startSlot.width - deltaXPct));
+            updates = {
+                x: Math.round(Math.max(0, startSlot.x + startSlot.width - newW)),
+                width: newW,
+                height: Math.round(Math.max(5, Math.min(100 - startSlot.y, startSlot.height + deltaYPct)))
+            };
+        } else if (type === 'resize-tr') {
+            const newH = Math.round(Math.max(5, startSlot.height - deltaYPct));
+            updates = {
+                y: Math.round(Math.max(0, startSlot.y + startSlot.height - newH)),
+                width: Math.round(Math.max(5, Math.min(100 - startSlot.x, startSlot.width + deltaXPct))),
+                height: newH
+            };
+        } else if (type === 'resize-tl') {
+            const newW = Math.round(Math.max(5, startSlot.width - deltaXPct));
+            const newH = Math.round(Math.max(5, startSlot.height - deltaYPct));
+            updates = {
+                x: Math.round(Math.max(0, startSlot.x + startSlot.width - newW)),
+                y: Math.round(Math.max(0, startSlot.y + startSlot.height - newH)),
+                width: newW,
+                height: newH
+            };
+        }
+
+        updateSlot(slotId, updates);
+    }, [updateSlot]);
+
+    const handlePointerUp = useCallback(() => {
+        dragState.current.active = false;
+    }, []);
+
+    // Attach global listeners for drag
+    useEffect(() => {
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        return () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+        };
+    }, [handlePointerMove, handlePointerUp]);
 
     const handleSave = async () => {
         if (!name || !imagePreview) return showAlert("Please provide name and system image.", "error");
@@ -121,12 +220,13 @@ const FrameEditor = () => {
                 style,
                 rarity,
                 artist,
-                artist,
-                layout_config: layouts, // Save the full layouts object { a: [...], b: [...] }
+                layout_config: layouts,
                 file: imageFile,
-                imageFileB: imageFileB, // Pass the second image file
+                imageFileB: imageFileB,
                 thumbnailFile: thumbnailFile,
-                thumbnail_url: thumbnailPreview
+                thumbnail_url: thumbnailPreview,
+                externalImage: (useExternalUrl && externalUrl.trim()) ? externalUrl.trim() : null,
+                externalImageB: (useExternalUrlB && externalUrlB.trim()) ? externalUrlB.trim() : null
             };
 
             if (editingFrame) {
@@ -145,22 +245,41 @@ const FrameEditor = () => {
         }
     };
 
-    // --- Interaction Logic (Naive Drag/Resize) ---
-    // In a real app we'd use 'react-rnd' or similar. 
-    // Implementing basic slider controls for the selected slot is safer and easier to implement correctly in a single file without deps.
+    const selectedSlot = photoSlots.find(s => s.id === selectedSlotId);
+
+    // Resize handle component
+    const ResizeHandle = ({ slotId, position }) => {
+        const cursorMap = {
+            'resize-tl': 'nwse-resize',
+            'resize-tr': 'nesw-resize',
+            'resize-bl': 'nesw-resize',
+            'resize-br': 'nwse-resize'
+        };
+        const posMap = {
+            'resize-tl': '-top-1.5 -left-1.5',
+            'resize-tr': '-top-1.5 -right-1.5',
+            'resize-bl': '-bottom-1.5 -left-1.5',
+            'resize-br': '-bottom-1.5 -right-1.5'
+        };
+
+        return (
+            <div
+                onPointerDown={(e) => handlePointerDown(e, slotId, position)}
+                className={`absolute ${posMap[position]} w-3 h-3 bg-white border-2 border-yellow-400 rounded-sm z-50 shadow-md hover:scale-125 transition-transform`}
+                style={{ cursor: cursorMap[position], touchAction: 'none' }}
+            />
+        );
+    };
 
     return (
         <div className="min-h-screen font-nunito p-4 md:p-8 text-white flex flex-col items-center relative overflow-hidden">
 
             {/* Animated Background Blob */}
             <motion.div
-                animate={{
-                    scale: [1, 1.2, 1],
-                    x: [0, 40, 0]
-                }}
+                animate={{ scale: [1, 1.2, 1], x: [0, 40, 0] }}
                 transition={{ repeat: Infinity, duration: 15, ease: "easeInOut" }}
                 className="absolute top-1/3 left-1/4 w-[400px] h-[400px] bg-game-primary/15 blur-[120px] rounded-full pointer-events-none"
-            ></motion.div>
+            />
 
             <div className="w-full max-w-6xl flex items-center justify-between mb-8 z-10">
                 <button onClick={() => navigate('/admin/frames')} className="flex items-center gap-2 text-gray-400 hover:text-white">
@@ -244,19 +363,64 @@ const FrameEditor = () => {
                         {/* Image Uploads */}
                         <div className="space-y-3 pt-4 border-t border-white/10">
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 mb-1">
-                                    FRAME IMAGE (LAYOUT {activeLayout.toUpperCase()})
-                                </label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-xs font-bold text-gray-400">
+                                        FRAME IMAGE (LAYOUT {activeLayout.toUpperCase()})
+                                    </label>
+                                    {activeLayout === 'a' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setUseExternalUrl(!useExternalUrl)}
+                                            className="text-[10px] text-yellow-400 hover:text-yellow-300 underline"
+                                        >
+                                            {useExternalUrl ? 'Switch to Upload' : 'Use External URL'}
+                                        </button>
+                                    )}
+                                    {activeLayout === 'b' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setUseExternalUrlB(!useExternalUrlB)}
+                                            className="text-[10px] text-yellow-400 hover:text-yellow-300 underline"
+                                        >
+                                            {useExternalUrlB ? 'Switch to Upload' : 'Use External URL'}
+                                        </button>
+                                    )}
+                                </div>
                                 {(activeLayout === 'a' ? imagePreview : imagePreviewB) && (
                                     <div className="mb-2 h-20 bg-gray-800 rounded flex items-center justify-center overflow-hidden">
                                         <img src={activeLayout === 'a' ? imagePreview : imagePreviewB} className="h-full object-contain" />
                                     </div>
                                 )}
-                                <input
-                                    type="file"
-                                    onChange={e => handleFileChange(e, activeLayout === 'a' ? 'image' : 'imageB')}
-                                    className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-gray-700 file:text-white hover:file:bg-gray-600"
-                                />
+
+                                {activeLayout === 'a' && useExternalUrl ? (
+                                    <input
+                                        type="text"
+                                        value={externalUrl}
+                                        onChange={(e) => {
+                                            setExternalUrl(e.target.value);
+                                            setImagePreview(e.target.value);
+                                        }}
+                                        placeholder="https://cdn.jsdelivr.net/gh/user/repo@main/frame.webp"
+                                        className="w-full bg-white/5 border border-gray-600 rounded p-2 text-xs text-white outline-none focus:border-yellow-400"
+                                    />
+                                ) : activeLayout === 'b' && useExternalUrlB ? (
+                                    <input
+                                        type="text"
+                                        value={externalUrlB}
+                                        onChange={(e) => {
+                                            setExternalUrlB(e.target.value);
+                                            setImagePreviewB(e.target.value);
+                                        }}
+                                        placeholder="https://cdn.jsdelivr.net/gh/user/repo@main/frame-b.webp"
+                                        className="w-full bg-white/5 border border-gray-600 rounded p-2 text-xs text-white outline-none focus:border-yellow-400"
+                                    />
+                                ) : (
+                                    <input
+                                        type="file"
+                                        onChange={e => handleFileChange(e, activeLayout === 'a' ? 'image' : 'imageB')}
+                                        className="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-gray-700 file:text-white hover:file:bg-gray-600"
+                                    />
+                                )}
                                 {activeLayout === 'b' && !imagePreviewB && imagePreview && (
                                     <p className="text-[10px] text-gray-500 mt-1 italic">
                                         *If not uploaded, Layout B will use Layout A's image.
@@ -280,6 +444,7 @@ const FrameEditor = () => {
                         </div>
                     </div>
 
+                    {/* PHOTO SLOTS section */}
                     <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
                         <h2 className="font-bold text-green-400">PHOTO SLOTS</h2>
                         <div className="flex gap-2">
@@ -298,76 +463,136 @@ const FrameEditor = () => {
                         </div>
                     </div>
 
-                    <div className="flex justify-end mb-4">
+                    <div className="mb-4">
                         <button onClick={addSlot} className="bg-white/10 p-1.5 rounded hover:bg-white/20 text-xs flex items-center gap-1 w-full justify-center border border-dashed border-white/20 hover:border-yellow-400/50 transition-colors">
                             <Plus size={14} /> ADD SLOT TO LAYOUT {activeLayout.toUpperCase()}
                         </button>
                     </div>
 
-                    {selectedSlotId ? (
-                        <div className="bg-white/5 p-4 rounded border border-white/10 space-y-3">
-                            <div className="flex justify-between text-xs text-yellow-400 font-bold">
-                                <span>SLOT #{selectedSlotId}</span>
-                                <button onClick={() => deleteSlot(selectedSlotId)} className="text-red-400 hover:underline">DELETE</button>
+                    {/* Slot List — compact cards */}
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                        {photoSlots.length === 0 && (
+                            <p className="text-xs text-gray-500 italic text-center py-4">No slots yet. Add a slot to begin.</p>
+                        )}
+                        {photoSlots.map((slot, idx) => (
+                            <div
+                                key={slot.id}
+                                onClick={() => setSelectedSlotId(slot.id)}
+                                className={`p-3 rounded-lg border cursor-pointer transition-all ${selectedSlotId === slot.id
+                                    ? 'bg-yellow-400/10 border-yellow-400/50 shadow-[0_0_12px_rgba(250,206,16,0.15)]'
+                                    : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                    }`}
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-bold text-yellow-400">SLOT {idx + 1}</span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); deleteSlot(slot.id); }}
+                                        className="p-1 text-red-400 hover:bg-red-500/20 rounded transition-colors"
+                                        title="Delete Slot"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+                                </div>
+                                {/* Numeric Inputs — inline grid */}
+                                <div className="grid grid-cols-4 gap-1.5">
+                                    {[
+                                        { label: 'X', key: 'x' },
+                                        { label: 'Y', key: 'y' },
+                                        { label: 'W', key: 'width' },
+                                        { label: 'H', key: 'height' }
+                                    ].map(({ label, key }) => (
+                                        <div key={key}>
+                                            <label className="text-[9px] text-gray-500 font-bold block mb-0.5">{label}</label>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={100}
+                                                value={slot[key]}
+                                                onChange={(e) => updateSlot(slot.id, { [key]: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) })}
+                                                className="w-full bg-black/40 border border-white/10 rounded px-1.5 py-1 text-[11px] text-white text-center font-mono outline-none focus:border-yellow-400 transition-colors"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
+                        ))}
+                    </div>
 
-                            {/* Sliders for adjusting the selected slot */}
-                            <div>
-                                <label className="flex justify-between text-xs text-gray-400">POS X <span>{photoSlots.find(s => s.id === selectedSlotId).x}%</span></label>
-                                <input type="range" min="0" max="100" value={photoSlots.find(s => s.id === selectedSlotId).x} onChange={e => updateSlot(selectedSlotId, { x: parseInt(e.target.value) })} className="w-full accent-yellow-400" />
-                            </div>
-                            <div>
-                                <label className="flex justify-between text-xs text-gray-400">POS Y <span>{photoSlots.find(s => s.id === selectedSlotId).y}%</span></label>
-                                <input type="range" min="0" max="100" value={photoSlots.find(s => s.id === selectedSlotId).y} onChange={e => updateSlot(selectedSlotId, { y: parseInt(e.target.value) })} className="w-full accent-yellow-400" />
-                            </div>
-                            <div>
-                                <label className="flex justify-between text-xs text-gray-400">WIDTH <span>{photoSlots.find(s => s.id === selectedSlotId).width}%</span></label>
-                                <input type="range" min="0" max="100" value={photoSlots.find(s => s.id === selectedSlotId).width} onChange={e => updateSlot(selectedSlotId, { width: parseInt(e.target.value) })} className="w-full accent-green-400" />
-                            </div>
-                            <div>
-                                <label className="flex justify-between text-xs text-gray-400">HEIGHT <span>{photoSlots.find(s => s.id === selectedSlotId).height}%</span></label>
-                                <input type="range" min="0" max="100" value={photoSlots.find(s => s.id === selectedSlotId).height} onChange={e => updateSlot(selectedSlotId, { height: parseInt(e.target.value) })} className="w-full accent-green-400" />
-                            </div>
+                    {/* Tip */}
+                    {photoSlots.length > 0 && (
+                        <div className="mt-4 flex items-start gap-2 text-[10px] text-gray-500 bg-white/5 p-2 rounded border border-white/5">
+                            <Move size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                            <span>Drag slots on the preview to move. Use corner handles to resize. Click a slot card for precision editing.</span>
                         </div>
-                    ) : (
-                        <p className="text-xs text-gray-500 italic">Select a slot on the image to calibrate.</p>
                     )}
                 </div>
 
                 {/* Preview / Work Area */}
-                <div className="lg:col-span-2 bg-black/80 rounded-2xl border-4 border-gray-800 p-8 flex justify-center items-start overflow-auto">
+                <div
+                    className="lg:col-span-2 bg-black/80 rounded-2xl border-4 border-gray-800 p-8 flex justify-center items-start overflow-auto"
+                    onClick={() => setSelectedSlotId(null)} // Click outside to deselect
+                >
                     {(activeLayout === 'a' ? imagePreview : (imagePreviewB || imagePreview)) ? (
-                        <div className="relative shadow-2xl" ref={containerRef} style={{ width: '400px' }}>
+                        <div
+                            className="relative shadow-2xl select-none"
+                            ref={containerRef}
+                            style={{ width: '100%', maxWidth: '500px' }}
+                            onClick={(e) => e.stopPropagation()} // Don't deselect when clicking inside
+                        >
                             {/* The Frame Image */}
                             <img
                                 src={activeLayout === 'a' ? imagePreview : (imagePreviewB || imagePreview)}
                                 className="w-full h-auto pointer-events-none select-none relative z-20"
                                 alt={`Frame Layout ${activeLayout}`}
+                                draggable={false}
                             />
 
-                            {/* The Slots Layer (Underneath Frame usually, but for editing we render ON TOP so user can see them, maybe semi-transparent) */}
-                            {/* Wait, usually in photobooth, photos are BEHIND the frame. */}
-                            {/* So the user should align these boxes to the HOLES in the frame. */}
-                            {/* We will render them semi-transparent RED so they are visible ON TOP of the frame image for calibration */}
-
+                            {/* The Slots Layer */}
                             <div className="absolute inset-0 z-30">
-                                {photoSlots.map(slot => (
-                                    <div
-                                        key={slot.id}
-                                        onClick={() => setSelectedSlotId(slot.id)}
-                                        style={{
-                                            left: `${slot.x}%`,
-                                            top: `${slot.y}%`,
-                                            width: `${slot.width}%`,
-                                            height: `${slot.height}%`,
-                                        }}
-                                        className={`absolute border-2 cursor-pointer transition-colors flex items-center justify-center ${selectedSlotId === slot.id ? 'bg-green-500/50 border-green-400' : 'bg-red-500/30 border-red-400/50 hover:bg-red-500/50'}`}
-                                    >
-                                        <span className="text-xs font-bold drop-shadow-md text-white">#{slot.id.toString().slice(-3)}</span>
-                                    </div>
-                                ))}
-                            </div>
+                                {photoSlots.map((slot, idx) => {
+                                    const isSelected = selectedSlotId === slot.id;
+                                    return (
+                                        <div
+                                            key={slot.id}
+                                            onPointerDown={(e) => handlePointerDown(e, slot.id, 'move')}
+                                            style={{
+                                                left: `${slot.x}%`,
+                                                top: `${slot.y}%`,
+                                                width: `${slot.width}%`,
+                                                height: `${slot.height}%`,
+                                                touchAction: 'none'
+                                            }}
+                                            className={`absolute border-2 flex items-center justify-center transition-colors ${isSelected
+                                                ? 'bg-green-500/40 border-green-400 shadow-[0_0_16px_rgba(74,222,128,0.3)] cursor-move'
+                                                : 'bg-blue-500/25 border-blue-400/50 hover:bg-blue-500/40 cursor-pointer'
+                                                }`}
+                                        >
+                                            {/* Slot Label */}
+                                            <span className={`text-[10px] font-bold drop-shadow-md pointer-events-none ${isSelected ? 'text-green-200' : 'text-white'
+                                                }`}>
+                                                {idx + 1}
+                                            </span>
 
+                                            {/* Position indicator */}
+                                            {isSelected && (
+                                                <span className="absolute -top-5 left-0 text-[9px] font-mono text-yellow-300 bg-black/70 px-1.5 py-0.5 rounded whitespace-nowrap pointer-events-none">
+                                                    {slot.x},{slot.y} — {slot.width}×{slot.height}
+                                                </span>
+                                            )}
+
+                                            {/* Resize handles — only for selected */}
+                                            {isSelected && (
+                                                <>
+                                                    <ResizeHandle slotId={slot.id} position="resize-tl" />
+                                                    <ResizeHandle slotId={slot.id} position="resize-tr" />
+                                                    <ResizeHandle slotId={slot.id} position="resize-bl" />
+                                                    <ResizeHandle slotId={slot.id} position="resize-br" />
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     ) : (
                         <div className="text-gray-500 flex flex-col items-center mt-20">
