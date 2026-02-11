@@ -15,7 +15,8 @@ const normalizeLayoutConfig = (config) => {
 export const getFrames = async () => {
     const { data, error } = await supabase
         .from('frames')
-        .select('*')
+        .select('id, name, image_url, thumbnail_url, status, layout_config, style, rarity, artist, sort_order, created_at')
+        .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -159,5 +160,18 @@ export const deleteFrame = async (id, imageUrl) => {
         }
     }
 
+    return true;
+};
+
+// Update order of multiple frames
+export const updateFrameOrder = async (frames) => {
+    // Parallel updates
+    const updates = frames.map((frame, index) =>
+        supabase
+            .from('frames')
+            .update({ sort_order: index })
+            .eq('id', frame.id)
+    );
+    await Promise.all(updates);
     return true;
 };

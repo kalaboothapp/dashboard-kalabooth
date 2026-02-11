@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useAlert } from '../../context/AlertContext';
-import { getFrames, deleteFrame, updateFrame } from '../../services/frames';
+// Removed duplicate getFrames import if it was there earlier, or just ensuring consistency.
+// The previous block handles imports.
 
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Edit, Home, AlertCircle, Sparkles, Gift, RefreshCw, Trophy, Users, Image as ImageIcon, X, Link as LinkIcon } from 'lucide-react';
 import * as Icons from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, Reorder } from 'framer-motion';
+import { updateFrameOrder, getFrames, deleteFrame, updateFrame } from '../../services/frames';
 
 const FrameManager = () => {
     const navigate = useNavigate();
     const { showAlert } = useAlert();
     const [frames, setFrames] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isReordering, setIsReordering] = useState(false);
+    const [originalOrder, setOriginalOrder] = useState([]);
 
     useEffect(() => {
         loadFrames();
@@ -53,18 +57,69 @@ const FrameManager = () => {
 
     return (
         <div className="relative">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-3xl font-titan text-game-accent">FRAME MANAGER</h1>
-                <button
-                    onClick={() => navigate('/frames/new')}
-                    className="px-4 py-2 bg-game-primary text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-white hover:text-black transition"
-                >
-                    <Icons.PlusSquare size={16} /> NEW FRAME
-                </button>
+                <div className="flex items-center gap-2">
+                    {isReordering ? (
+                        <>
+                            <button
+                                onClick={async () => {
+                                    setLoading(true);
+                                    await updateFrameOrder(frames);
+                                    setLoading(false);
+                                    setIsReordering(false);
+                                    showAlert("Order Saved!", "success");
+                                }}
+                                className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:brightness-110 shadow-game pb-2"
+                            >
+                                SAVE ORDER
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setFrames(originalOrder);
+                                    setIsReordering(false);
+                                }}
+                                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-bold hover:brightness-110 shadow-game pb-2"
+                            >
+                                CANCEL
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={() => {
+                                setOriginalOrder([...frames]);
+                                setIsReordering(true);
+                            }}
+                            className="px-4 py-2 bg-yellow-400 text-black rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-white hover:text-black transition pb-2 shadow-game"
+                        >
+                            <Icons.Move size={16} /> REORDER
+                        </button>
+                    )}
+                    <button
+                        onClick={() => navigate('/frames/new')}
+                        className="px-4 py-2 bg-game-primary text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-white hover:text-black transition pb-2 shadow-game"
+                        disabled={isReordering}
+                    >
+                        <Icons.PlusSquare size={16} /> NEW FRAME
+                    </button>
+                </div>
             </div>
 
             {loading ? (
                 <div className="text-center py-20 animate-pulse text-gray-500 font-mono">LOADING SYSTEM DATA...</div>
+            ) : isReordering ? (
+                <Reorder.Group axis="y" values={frames} onReorder={setFrames} className="space-y-2 max-w-3xl mx-auto">
+                    {frames.map((frame) => (
+                        <Reorder.Item key={frame.id} value={frame} className="bg-white/10 p-3 rounded-lg border border-white/10 flex items-center gap-4 cursor-move shadow-md relative">
+                            <div className="text-gray-500"><Icons.GripVertical /></div>
+                            <img src={frame.image_url} alt={frame.name} className="w-12 h-12 object-contain bg-black/50 rounded" />
+                            <div className="flex-1">
+                                <span className="font-bold text-lg text-white">{frame.name}</span>
+                                <span className="ml-2 text-xs text-gray-400">{frame.status}</span>
+                            </div>
+                        </Reorder.Item>
+                    ))}
+                </Reorder.Group>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     {frames.map((frame, index) => (
