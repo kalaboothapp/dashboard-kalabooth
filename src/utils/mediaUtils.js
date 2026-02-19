@@ -12,11 +12,29 @@ export const getEmbedData = (url) => {
     // Regex for: youtube.com/watch?v=ID, youtube.com/embed/ID, youtu.be/ID
     const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
     const ytMatch = url.match(ytRegex);
+
+    // Extract timestamp (t=1m30s or t=90)
+    const timeRegex = /[?&](?:t|start)=(\d+(?:m\d+s)?|\d+)/i;
+    const timeMatch = url.match(timeRegex);
+    let startParam = '';
+
+    if (timeMatch && timeMatch[1]) {
+        let time = timeMatch[1];
+        // Convert 1m30s format to seconds
+        if (time.includes('m')) {
+            const parts = time.match(/(\d+)m(\d+)s/);
+            if (parts) {
+                time = parseInt(parts[1]) * 60 + parseInt(parts[2]);
+            }
+        }
+        startParam = `&start=${time}`;
+    }
+
     if (ytMatch && ytMatch[1]) {
         return {
             type: 'youtube',
             // autoplay=1 (muted usually needed for chrome), controls=0 (minimal), loop=1
-            src: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&controls=1&loop=1&playlist=${ytMatch[1]}`
+            src: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&controls=1&loop=1&playlist=${ytMatch[1]}${startParam}`
         };
     }
 
