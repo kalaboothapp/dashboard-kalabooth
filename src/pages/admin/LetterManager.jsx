@@ -3,6 +3,7 @@ import { useAlert } from '../../context/AlertContext';
 import { getLetters, createLetter, updateLetter, deleteLetter } from '../../services/letters';
 import { Plus, Trash2, Edit, Mail, CheckCircle, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getEmbedData } from '../../utils/mediaUtils';
 
 const LetterManager = () => {
     const { showAlert } = useAlert();
@@ -61,6 +62,16 @@ const LetterManager = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
+
+        // 1. Validate Music URL if present
+        if (formData.music_url && formData.music_url.trim() !== '') {
+            const embedData = getEmbedData(formData.music_url);
+            if (!embedData) {
+                showAlert("Invalid Music URL! Only YouTube and Spotify links are supported.", "error");
+                return;
+            }
+        }
+
         try {
             const payload = {
                 ...formData,
