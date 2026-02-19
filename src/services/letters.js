@@ -19,7 +19,8 @@ export const createLetter = async (letterData) => {
             title: letterData.title,
             content: letterData.content,
             is_active: letterData.is_active,
-            allowed_emails: letterData.allowed_emails
+            allowed_emails: letterData.allowed_emails,
+            music_url: letterData.music_url
         }])
         .select()
         .single();

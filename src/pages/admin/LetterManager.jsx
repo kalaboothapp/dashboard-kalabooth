@@ -16,6 +16,7 @@ const LetterManager = () => {
         title: '',
         content: '',
         allowed_emails: '',
+        music_url: '',
         is_active: true
     });
 
@@ -42,6 +43,7 @@ const LetterManager = () => {
                 title: letter.title,
                 content: letter.content,
                 allowed_emails: letter.allowed_emails ? letter.allowed_emails.join(', ') : '',
+                music_url: letter.music_url || '',
                 is_active: letter.is_active
             });
         } else {
@@ -50,6 +52,7 @@ const LetterManager = () => {
                 title: '',
                 content: '',
                 allowed_emails: '',
+                music_url: '',
                 is_active: true
             });
         }
@@ -206,6 +209,17 @@ const LetterManager = () => {
                                             onChange={e => setFormData({ ...formData, allowed_emails: e.target.value })}
                                             className="w-full bg-black/40 border border-gray-600 rounded p-3 text-white focus:border-game-primary outline-none text-sm"
                                             placeholder="user@example.com, friend@gmail.com"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-400 mb-1">BACKGROUND MUSIC (YOUTUBE / SPOTIFY LINK)</label>
+                                        <input
+                                            type="text"
+                                            value={formData.music_url}
+                                            onChange={e => setFormData({ ...formData, music_url: e.target.value })}
+                                            className="w-full bg-black/40 border border-gray-600 rounded p-3 text-white focus:border-game-primary outline-none text-sm"
+                                            placeholder="https://youtu.be/... or https://open.spotify.com/track/..."
                                         />
                                     </div>
 
