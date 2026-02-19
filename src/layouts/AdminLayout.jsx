@@ -10,7 +10,8 @@ import {
     Menu,
     X,
     Gift,
-    Sparkles
+    Sparkles,
+    Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -32,6 +33,7 @@ const AdminLayout = () => {
         { path: '/campaigns', label: 'CAMPAIGNS', icon: Gift },
         { path: '/links', label: 'MANAGE LINKS', icon: LinkIcon },
         { path: '/filters', label: 'FILTERS', icon: Sparkles },
+        { path: '/letters', label: 'WARKOP MAILS', icon: Mail },
         { path: '/frames/new', label: 'NEW FRAME', icon: PlusSquare },
     ];
 

@@ -22,6 +22,7 @@ const FrameEditor = () => {
     const [style, setStyle] = useState(editingFrame?.style || 'Custom');
     const [rarity, setRarity] = useState(editingFrame?.rarity || 'Common');
     const [artist, setArtist] = useState(editingFrame?.artist || 'Default');
+    const [allowedEmails, setAllowedEmails] = useState(editingFrame?.allowed_emails?.join(', ') || '');
     const [thumbnailFile, setThumbnailFile] = useState(null);
     const [thumbnailPreview, setThumbnailPreview] = useState(editingFrame?.thumbnail_url || null);
 
@@ -226,7 +227,8 @@ const FrameEditor = () => {
                 thumbnailFile: thumbnailFile,
                 thumbnail_url: thumbnailPreview,
                 externalImage: (useExternalUrl && externalUrl.trim()) ? externalUrl.trim() : null,
-                externalImageB: (useExternalUrlB && externalUrlB.trim()) ? externalUrlB.trim() : null
+                externalImageB: (useExternalUrlB && externalUrlB.trim()) ? externalUrlB.trim() : null,
+                allowed_emails: allowedEmails.trim() ? allowedEmails.split(',').map(e => e.trim()).filter(Boolean) : null
             };
 
             if (editingFrame) {
@@ -357,6 +359,17 @@ const FrameEditor = () => {
                                 onChange={e => setArtist(e.target.value)}
                                 placeholder="e.g. Default, Pixenze Theme, Event"
                                 className="w-full bg-white/5 border border-gray-600 rounded p-2 text-white outline-none focus:border-yellow-400"
+                            />
+                        </div>
+
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-1">ALLOWED EMAILS (COMMA SEPARATED)</label>
+                            <textarea
+                                value={allowedEmails}
+                                onChange={e => setAllowedEmails(e.target.value)}
+                                placeholder="e.g. user1@gmail.com, user2@gmail.com (Leave empty for Public)"
+                                className="w-full bg-white/5 border border-gray-600 rounded p-2 text-white outline-none focus:border-yellow-400 min-h-[80px]"
                             />
                         </div>
 

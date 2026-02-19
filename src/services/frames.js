@@ -15,7 +15,7 @@ const normalizeLayoutConfig = (config) => {
 export const getFrames = async () => {
     const { data, error } = await supabase
         .from('frames')
-        .select('id, name, image_url, thumbnail_url, status, layout_config, style, rarity, artist, sort_order, created_at')
+        .select('id, name, image_url, thumbnail_url, status, layout_config, style, rarity, artist, sort_order, created_at, allowed_emails')
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
 
@@ -79,7 +79,8 @@ export const createFrame = async (frameData) => {
             style: frameData.style || 'Custom',
             rarity: frameData.rarity || 'Common',
             artist: frameData.artist || 'Default',
-            type: 'custom'
+            type: 'custom',
+            allowed_emails: frameData.allowed_emails || null
         }])
         .select()
         .single();
