@@ -4,6 +4,7 @@ import { useAlert } from '../../context/AlertContext';
 import { Upload, Trash2, Plus, Zap, Loader, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { parseCubeLUT, createLUTTexture, createFilterProgram, createQuadValues } from '../../utils/lutUtils';
+import { uploadToGitHub } from '../../lib/github';
 
 const FilterManager = () => {
     const { showAlert } = useAlert();
@@ -80,23 +81,33 @@ const FilterManager = () => {
             // 2. Generate Thumbnail (Client-side WebGL)
             const thumbnailBlob = await generateThumbnail(text);
 
-            // 3. Upload .cube to Storage
-            const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-            const { error: uploadError } = await supabase.storage
-                .from('luts')
-                .upload(fileName, file);
-            if (uploadError) throw uploadError;
+            let storagePath, thumbnailUrl;
 
-            // 4. Upload Thumbnail to Storage
-            const thumbName = `thumb_${fileName}.jpg`;
-            const { error: thumbError } = await supabase.storage
-                .from('luts')
-                .upload(thumbName, thumbnailBlob);
-            if (thumbError) throw thumbError;
+            if (import.meta.env.VITE_GITHUB_TOKEN) {
+                // 3 & 4. Upload to GitHub instead
+                storagePath = await uploadToGitHub(file, 'luts');
+                thumbnailUrl = await uploadToGitHub(new File([thumbnailBlob], `thumb_${file.name}.jpg`, { type: 'image/jpeg' }), 'luts');
+            } else {
+                // 3. Upload .cube to Storage
+                const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('luts')
+                    .upload(fileName, file, { cacheControl: '31536000' });
+                if (uploadError) throw uploadError;
 
-            // 5. Get Public URLs
-            const { data: { publicUrl: storagePath } } = supabase.storage.from('luts').getPublicUrl(fileName);
-            const { data: { publicUrl: thumbnailUrl } } = supabase.storage.from('luts').getPublicUrl(thumbName);
+                // 4. Upload Thumbnail to Storage
+                const thumbName = `thumb_${fileName}.jpg`;
+                const { error: thumbError } = await supabase.storage
+                    .from('luts')
+                    .upload(thumbName, thumbnailBlob, { cacheControl: '31536000' });
+                if (thumbError) throw thumbError;
+
+                // 5. Get Public URLs
+                const { data: publicUrlData1 } = supabase.storage.from('luts').getPublicUrl(fileName);
+                const { data: publicUrlData2 } = supabase.storage.from('luts').getPublicUrl(thumbName);
+                storagePath = publicUrlData1.publicUrl;
+                thumbnailUrl = publicUrlData2.publicUrl;
+            }
 
             // 6. Save to DB
             const { error: dbError } = await supabase.from('luts').insert({
@@ -225,19 +236,19 @@ const FilterManager = () => {
     return (
         <div className="space-y-8">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                 <div>
-                    <h1 className="text-4xl font-titan text-white drop-shadow-lg flex items-center gap-3">
-                        <Zap className="text-game-secondary" size={32} />
-                        FILTER MANAGER
+                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                        <Zap className="text-blue-500" size={24} />
+                        Filter Manager
                     </h1>
-                    <p className="text-gray-400 mt-2">Upload and manage .cube LUT filters for the photobooth.</p>
+                    <p className="text-slate-500 mt-1">Upload and manage .cube LUT filters for the photobooth.</p>
                 </div>
             </div>
 
             {/* Upload Zone */}
             <div
-                className={`border-4 border-dashed rounded-3xl p-10 text-center transition-all ${dragActive ? 'border-game-secondary bg-white/10 scale-[1.02]' : 'border-white/20 bg-black/20'
+                className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all ${dragActive ? 'border-blue-400 bg-blue-50 scale-[1.01]' : 'border-slate-300 bg-white hover:border-slate-400'
                     }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -245,19 +256,19 @@ const FilterManager = () => {
                 onDrop={handleDrop}
             >
                 {uploading ? (
-                    <div className="flex flex-col items-center gap-4">
-                        <Loader className="animate-spin text-game-secondary" size={48} />
-                        <p className="text-xl font-bold animate-pulse">Generating preview & uploading...</p>
+                    <div className="flex flex-col items-center gap-4 py-4">
+                        <Loader className="animate-spin text-blue-500" size={40} />
+                        <p className="text-lg font-semibold text-slate-700 animate-pulse">Generating preview & uploading...</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-20 h-20 rounded-full bg-game-primary/20 flex items-center justify-center mb-2">
-                            <Upload size={40} className="text-game-primary" />
+                    <div className="flex flex-col items-center gap-3 py-2">
+                        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-1">
+                            <Upload size={28} className="text-blue-600" />
                         </div>
-                        <h3 className="text-2xl font-bold text-white">Drag & Drop .cube file here</h3>
-                        <p className="text-gray-400">or</p>
-                        <label className="px-8 py-3 bg-game-primary text-white font-bold rounded-xl cursor-pointer hover:bg-white hover:text-game-primary transition shadow-game">
-                            BROWSE FILES
+                        <h3 className="text-xl font-bold text-slate-800">Drag & Drop .cube file here</h3>
+                        <p className="text-slate-500 text-sm">or</p>
+                        <label className="mt-2 px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg cursor-pointer hover:bg-blue-700 transition shadow-sm">
+                            Browse Files
                             <input type="file" accept=".cube" className="hidden" onChange={(e) => handleFileUpload(e.target.files[0])} />
                         </label>
                     </div>
@@ -269,26 +280,28 @@ const FilterManager = () => {
 
             {/* Filter List */}
             {loading ? (
-                <div className="flex justify-center p-12">
-                    <Loader className="animate-spin" size={32} />
+                <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
+                    <Loader className="animate-spin" size={28} />
+                    <p className="font-medium">Loading filters...</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {filters.map((filter) => (
-                        <div key={filter.id} className={`bg-black/40 border-4 rounded-xl overflow-hidden transition-all group ${!filter.is_active ? 'opacity-60 grayscale' : 'border-black hover:border-game-secondary'}`}>
+                        <div key={filter.id} className={`bg-white border rounded-2xl overflow-hidden transition-all shadow-sm flex flex-col group ${!filter.is_active ? 'opacity-60 grayscale-[30%] border-slate-200' : 'border-slate-200 hover:border-blue-300 hover:shadow-md'}`}>
                             {/* Preview Image */}
-                            <div className="aspect-square bg-black relative">
+                            <div className="aspect-square bg-slate-100 relative border-b border-slate-100">
                                 {filter.thumbnail_url ? (
                                     <img src={filter.thumbnail_url} alt={filter.name} className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-white/20">
-                                        <ImageIcon size={48} />
+                                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                        <ImageIcon size={40} />
                                     </div>
                                 )}
                                 <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={() => handleDelete(filter.id)}
-                                        className="p-2 bg-red-500 text-white rounded-lg shadow-md hover:scale-110 transition"
+                                        className="p-1.5 bg-white/90 text-rose-500 rounded-md shadow-sm hover:bg-rose-50 hover:scale-105 transition"
+                                        title="Delete Filter"
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -296,20 +309,28 @@ const FilterManager = () => {
                             </div>
 
                             {/* Info */}
-                            <div className="p-4">
-                                <h3 className="font-bold text-lg text-white truncate mb-2">{filter.name}</h3>
-                                <button
-                                    onClick={() => handleToggleActive(filter.id, filter.is_active)}
-                                    className={`w-full py-2 rounded-lg font-bold text-sm border-2 ${filter.is_active
-                                            ? 'bg-game-success text-black border-black shadow-[2px_2px_0_#000]'
-                                            : 'bg-transparent text-gray-400 border-gray-600 hover:bg-white/10'
-                                        }`}
-                                >
-                                    {filter.is_active ? 'ACTIVE' : 'INACTIVE'}
-                                </button>
+                            <div className="p-4 flex flex-col flex-1">
+                                <h3 className="font-bold text-slate-800 truncate mb-3" title={filter.name}>{filter.name}</h3>
+                                <div className="mt-auto">
+                                    <button
+                                        onClick={() => handleToggleActive(filter.id, filter.is_active)}
+                                        className={`w-full py-2 rounded-lg font-semibold text-xs tracking-wide transition-colors ${filter.is_active
+                                            ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                            }`}
+                                    >
+                                        {filter.is_active ? 'ACTIVE' : 'INACTIVE'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))}
+                    {filters.length === 0 && (
+                        <div className="col-span-full py-16 text-center text-slate-500 bg-white border border-dashed border-slate-300 rounded-2xl">
+                            <ImageIcon className="mx-auto mb-3 text-slate-300" size={40} />
+                            <p className="font-medium">No filters found</p>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

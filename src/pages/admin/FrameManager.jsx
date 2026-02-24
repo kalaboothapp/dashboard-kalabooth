@@ -57,9 +57,9 @@ const FrameManager = () => {
 
     return (
         <div className="relative">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <h1 className="text-3xl font-titan text-game-accent">FRAME MANAGER</h1>
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Frames</h1>
+                <div className="flex flex-wrap items-center gap-2">
                     {isReordering ? (
                         <>
                             <button
@@ -70,18 +70,18 @@ const FrameManager = () => {
                                     setIsReordering(false);
                                     showAlert("Order Saved!", "success");
                                 }}
-                                className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-bold hover:brightness-110 shadow-game pb-2"
+                                className="px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 shadow-sm transition-colors"
                             >
-                                SAVE ORDER
+                                Save Order
                             </button>
                             <button
                                 onClick={() => {
                                     setFrames(originalOrder);
                                     setIsReordering(false);
                                 }}
-                                className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-bold hover:brightness-110 shadow-game pb-2"
+                                className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 shadow-sm transition-colors"
                             >
-                                CANCEL
+                                Cancel
                             </button>
                         </>
                     ) : (
@@ -90,92 +90,98 @@ const FrameManager = () => {
                                 setOriginalOrder([...frames]);
                                 setIsReordering(true);
                             }}
-                            className="px-4 py-2 bg-yellow-400 text-black rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-white hover:text-black transition pb-2 shadow-game"
+                            className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm"
                         >
-                            <Icons.Move size={16} /> REORDER
+                            <Icons.Move size={16} /> Reorder
                         </button>
                     )}
                     <button
                         onClick={() => navigate('/frames/new')}
-                        className="px-4 py-2 bg-game-primary text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-white hover:text-black transition pb-2 shadow-game"
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"
                         disabled={isReordering}
                     >
-                        <Icons.PlusSquare size={16} /> NEW FRAME
+                        <Icons.Plus size={16} /> New Frame
                     </button>
                 </div>
             </div>
 
             {loading ? (
-                <div className="text-center py-20 animate-pulse text-gray-500 font-mono">LOADING SYSTEM DATA...</div>
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
+                    <Icons.Loader2 className="animate-spin" size={32} />
+                    <p className="font-medium text-slate-500">Loading frame data...</p>
+                </div>
             ) : isReordering ? (
-                <Reorder.Group axis="y" values={frames} onReorder={setFrames} className="space-y-2 max-w-3xl mx-auto">
+                <Reorder.Group axis="y" values={frames} onReorder={setFrames} className="space-y-3 max-w-3xl mx-auto">
                     {frames.map((frame) => (
-                        <Reorder.Item key={frame.id} value={frame} className="bg-white/10 p-3 rounded-lg border border-white/10 flex items-center gap-4 cursor-move shadow-md relative">
-                            <div className="text-gray-500"><Icons.GripVertical /></div>
-                            <img src={frame.image_url} alt={frame.name} className="w-12 h-12 object-contain bg-black/50 rounded" />
+                        <Reorder.Item key={frame.id} value={frame} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center gap-4 cursor-move shadow-sm relative group hover:border-blue-300 transition-colors">
+                            <div className="text-slate-400 group-hover:text-blue-500 transition-colors"><Icons.GripVertical size={20} /></div>
+                            <div className="h-14 w-14 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-100 overflow-hidden">
+                                <img src={frame.image_url} alt={frame.name} className="w-full h-full object-contain" />
+                            </div>
                             <div className="flex-1">
-                                <span className="font-bold text-lg text-white">{frame.name}</span>
-                                <span className="ml-2 text-xs text-gray-400">{frame.status}</span>
+                                <div className="font-semibold text-slate-900">{frame.name}</div>
+                                <div className="text-xs text-slate-500 capitalize mt-0.5">{frame.status.replace('_', ' ')}</div>
                             </div>
                         </Reorder.Item>
                     ))}
                 </Reorder.Group>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {frames.map((frame, index) => (
                         <motion.div
                             key={frame.id}
-                            initial={{ y: 30, opacity: 0 }}
+                            initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: index * 0.1 }}
-                            whileHover={{ y: -5 }}
-                            className={`bg-white/10 border-4 border-black rounded-xl p-4 flex flex-col gap-4 relative group shadow-game ${frame.status === 'coming_soon' ? 'opacity-70' : ''}`}
+                            transition={{ delay: index * 0.05 }}
+                            className={`bg-white border border-slate-200 rounded-2xl p-5 flex flex-col gap-4 relative group shadow-sm hover:shadow-md transition-all ${frame.status === 'coming_soon' ? 'opacity-80 grayscale-[20%]' : ''}`}
                         >
-
-                            <div className="aspect-[2/3] bg-black/50 rounded-lg overflow-hidden relative border border-white/5">
-                                {/* Checkerboard for transparency */}
-                                <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
-                                <img src={frame.image_url} className="w-full h-full object-contain relative z-10" alt={frame.name} />
+                            <div className="aspect-[2/3] bg-slate-50 rounded-xl overflow-hidden relative border border-slate-100 flex items-center justify-center">
+                                {/* Transparent checkerboard pattern subtle */}
+                                <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000000 1px, transparent 1px)', backgroundSize: '10px 10px' }}></div>
+                                <img src={frame.image_url} className="w-full h-full object-contain relative z-10 p-2" alt={frame.name} />
 
                                 {frame.status === 'coming_soon' && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
-                                        <span className="bg-yellow-400 text-black font-bold px-4 py-1 rounded rotate-12 font-titan tracking-wider border-2 border-white">COMING SOON</span>
+                                    <div className="absolute inset-x-0 bottom-4 flex justify-center z-20">
+                                        <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-200 shadow-sm uppercase tracking-wider">
+                                            Coming Soon
+                                        </span>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="font-bold text-lg">{frame.name}</h3>
-                                    <p className="text-xs text-gray-400 font-mono">{new Date(frame.created_at).toLocaleDateString()}</p>
+                            <div className="flex justify-between items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-slate-900 truncate" title={frame.name}>{frame.name}</h3>
+                                    <p className="text-xs text-slate-500 mt-1">{new Date(frame.created_at).toLocaleDateString()}</p>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-1.5 shrink-0">
                                     <button
                                         onClick={() => navigate(`/frames/edit/${frame.id}`, { state: { frame } })}
-                                        className="p-2 bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500 hover:text-white transition"
-                                        title="Calibrate Layout"
+                                        className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 border border-transparent hover:border-blue-100 transition-colors"
+                                        title="Edit Frame"
                                     >
-                                        <Edit size={18} />
+                                        <Icons.Edit size={16} />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(frame.id, frame.image_url)}
-                                        className="p-2 bg-red-500/20 text-red-400 rounded hover:bg-red-500 hover:text-white transition"
+                                        className="p-2 bg-slate-50 text-slate-600 rounded-lg hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-100 transition-colors"
+                                        title="Delete Frame"
                                     >
-                                        <Trash2 size={18} />
+                                        <Icons.Trash2 size={16} />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="mt-auto pt-4 border-t border-white/10 flex justify-between items-center">
+                            <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
                                 <div className="flex items-center gap-2">
-                                    <div className={`w-3 h-3 rounded-full ${frame.status === 'active' ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-yellow-500'}`}></div>
-                                    <span className="text-xs font-mono uppercase text-gray-400">{frame.status.replace('_', ' ')}</span>
+                                    <div className={`w-2 h-2 rounded-full ${frame.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                    <span className="text-xs font-medium text-slate-600 capitalize">{frame.status.replace('_', ' ')}</span>
                                 </div>
                                 <button
                                     onClick={() => toggleStatus(frame)}
-                                    className="text-xs font-bold underline hover:text-yellow-400"
+                                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide transition-colors"
                                 >
-                                    {frame.status === 'active' ? 'SET TO COMING SOON' : 'ACTIVATE'}
+                                    {frame.status === 'active' ? 'Hide' : 'Activate'}
                                 </button>
                             </div>
 
@@ -183,9 +189,12 @@ const FrameManager = () => {
                     ))}
 
                     {frames.length === 0 && (
-                        <div className="col-span-full py-20 text-center text-gray-500 border-2 border-dashed border-gray-700 rounded-xl">
-                            <AlertCircle className="mx-auto mb-4 opacity-50" size={48} />
-                            <p>NO FRAMES DETECTED IN DATABANKS.</p>
+                        <div className="col-span-full py-16 flex flex-col items-center justify-center text-slate-500 bg-white border border-dashed border-slate-300 rounded-2xl gap-3">
+                            <Icons.Image className="text-slate-300" size={48} />
+                            <div className="text-center">
+                                <p className="font-medium text-slate-700">No frames found</p>
+                                <p className="text-sm mt-1">Upload a new frame to get started</p>
+                            </div>
                         </div>
                     )}
                 </div>

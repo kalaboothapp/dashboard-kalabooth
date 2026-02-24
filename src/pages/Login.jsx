@@ -35,49 +35,62 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#02124d] flex items-center justify-center font-nunito p-4">
-            <div className="bg-white/10 border-4 border-black p-8 rounded-2xl shadow-game max-w-md w-full relative overflow-hidden">
-                <div className="absolute top-[-20px] right-[-20px] opacity-10 rotate-12">
-                    <Sparkles size={150} />
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-nunito p-4">
+            <div className="bg-white border border-slate-200 p-8 sm:p-10 rounded-3xl shadow-xl max-w-md w-full relative overflow-hidden">
+                <div className="absolute -top-10 -right-10 bg-blue-50 text-blue-100 rounded-full w-40 h-40 flex items-center justify-center opacity-50 pointer-events-none">
+                    <Sparkles size={80} />
                 </div>
 
-                <h1 className="text-3xl font-titan text-game-accent mb-2 text-center">ADMIN PORTAL</h1>
-                <p className="text-gray-300 text-center mb-8 text-sm">Restricted Access. Credentials Required.</p>
+                <div className="relative z-10 mb-8 text-center">
+                    <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg shadow-blue-600/20">
+                        <span className="text-white font-extrabold text-2xl tracking-tighter">PX</span>
+                    </div>
+                    <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Admin Portal</h1>
+                    <p className="text-slate-500 mt-2 text-sm">Sign in to manage your photobooth operations</p>
+                </div>
 
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-5 relative z-10">
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1">EMAIL COMMANDER</label>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
                         <input
                             type="email"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-black/40 border-2 border-white/20 rounded-xl px-4 py-3 text-white focus:border-game-secondary focus:outline-none transition"
-                            placeholder="admin@pixenzebooth.com"
+                            className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:outline-none transition-all"
+                            placeholder="admin@example.com"
                         />
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-game-success text-black font-titan py-3 rounded-xl border-b-4 border-green-800 active:border-b-0 active:translate-y-1 hover:brightness-110 transition flex justify-center items-center gap-2"
+                        className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-md hover:bg-blue-700 hover:shadow-lg focus:ring-4 focus:ring-blue-100 transition-all flex justify-center items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        {loading ? 'TRANSMITTING...' : 'SEND MAGIC LINK'}
+                        {loading ? (
+                            <>
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Sending Link...
+                            </>
+                        ) : 'Send Magic Link'}
                     </button>
 
-                    <div className="relative my-4">
+                    <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-white/20" />
+                            <span className="w-full border-t border-slate-200" />
                         </div>
                         <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-[#02124d] px-2 text-gray-400 font-bold">Or enter via</span>
+                            <span className="bg-white px-3 text-slate-400 font-semibold tracking-wider">or continue with</span>
                         </div>
                     </div>
 
                     <button
                         type="button"
                         onClick={signInWithGoogle}
-                        className="w-full bg-white text-black font-titan py-3 rounded-xl border-b-4 border-gray-300 active:border-b-0 active:translate-y-1 hover:brightness-110 transition flex justify-center items-center gap-2"
+                        className="w-full bg-white text-slate-700 font-semibold py-3 px-4 rounded-xl border border-slate-300 shadow-sm hover:bg-slate-50 transition-all flex justify-center items-center gap-3"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
                             <path
@@ -97,12 +110,12 @@ const Login = () => {
                                 fill="#EA4335"
                             />
                         </svg>
-                        GOOGLE ACCESS
+                        Google
                     </button>
                 </form>
 
                 {message && (
-                    <div className="mt-4 p-3 bg-white/20 rounded-lg text-center text-sm font-bold border border-white/10 animate-pulse">
+                    <div className="mt-6 p-4 bg-emerald-50 text-emerald-800 rounded-xl text-center text-sm font-medium border border-emerald-200 relative z-10">
                         {message}
                     </div>
                 )}

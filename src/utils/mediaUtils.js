@@ -52,3 +52,54 @@ export const getEmbedData = (url) => {
 
     return null; // Not supported or invalid
 };
+
+/**
+ * Compresses an image file and converts it to WebP format.
+ * 
+ * @param {File} file - The original image file
+ * @param {number} maxWidth - Maximum width (maintains aspect ratio)
+ * @param {number} quality - WebP quality (0 to 1)
+ * @returns {Promise<File>} - Resolves with the new WebP File
+ */
+export const compressImageToWebP = (file, maxWidth = 1080, quality = 0.8) => {
+    return new Promise((resolve, reject) => {
+        if (!file) return reject(new Error("No file provided"));
+
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        const newFilename = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+                        const newFile = new File([blob], newFilename, {
+                            type: 'image/webp',
+                            lastModified: Date.now()
+                        });
+                        resolve(newFile);
+                    } else {
+                        reject(new Error("Failed to create WebP blob"));
+                    }
+                }, 'image/webp', quality);
+            };
+            img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+};

@@ -6,52 +6,28 @@
     --font-family-nunito: "Nunito", sans-serif;
     --font-family-fredoka: "Fredoka", sans-serif;
 
-    /* Game Theme Colors - RICH PALETTE */
-    /* Primary Blue */
-    --color-game-bg: #042493;
-    /* Main Deep Blue */
-    --color-game-bg-dark: #02124d;
-    /* Darker Blue for depth */
-    --color-game-bg-light: #1a3dbf;
-    /* Lighter Blue for highlights */
+    /* Semantic Admin Colors (mapped to old vars to prevent breakage) */
+    --color-game-bg: #f8fafc;
+    --color-game-bg-dark: #f1f5f9;
+    --color-game-bg-light: #ffffff;
+    --color-game-surface: #ffffff;
+    --color-game-surface-dim: #f8fafc;
+    --color-game-primary: #3b82f6;
+    --color-game-primary-hover: #2563eb;
+    --color-game-primary-dark: #1d4ed8;
+    --color-game-secondary: #fef08a;
+    --color-game-secondary-light: #fef9c3;
+    --color-game-secondary-dark: #eab308;
+    --color-game-accent: #0f172a;
+    --color-game-success: #10b981;
+    --color-game-dark: #020617;
+    --color-game-border: #e2e8f0;
 
-    /* Surface White */
-    --color-game-surface: #fffff6;
-    /* Off-White */
-    --color-game-surface-dim: #f0f0e6;
-    /* Dimmed White */
+    /* Clean Shadows */
+    --shadow-game: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-game-hover: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-game-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 
-    /* Accent Red */
-    --color-game-primary: #ba1c16;
-    /* Deep Red */
-    --color-game-primary-hover: #d9211a;
-    /* Brighter Red */
-    --color-game-primary-dark: #8a120e;
-    /* Darker Red */
-
-    /* Accent Yellow */
-    --color-game-secondary: #face10;
-    /* Golden Yellow */
-    --color-game-secondary-light: #fcd742;
-    /* Lighter Yellow */
-    --color-game-secondary-dark: #c7a308;
-    /* Darker Yellow */
-
-    /* Functional */
-    --color-game-accent: #fffff6;
-    --color-game-success: #39FF14;
-    /* Keep neon green for specific success states */
-    --color-game-dark: #020c2b;
-    /* Very dark blue instead of pure black for harmony */
-    --color-game-border: #000000;
-
-    /* Custom Shadows - Tinted */
-    --shadow-game: 4px 4px 0px 0px #02124d;
-    --shadow-game-hover: 6px 6px 0px 0px #02124d;
-    --shadow-game-lg: 8px 8px 0px 0px #02124d;
-
-    /* Custom Animations */
-    --animate-bounce-slow: bounce 3s infinite;
     --animate-float: float 6s ease-in-out infinite;
 }
 
@@ -185,113 +161,30 @@ body {
     font-family: 'Nunito', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Rich Deep Blue Gradient Background */
-    background: radial-gradient(circle at 50% 0%, #1a3dbf 0%, #042493 40%, #02124d 100%);
-    background-attachment: fixed;
-    color: #fffff6;
+    background-color: #f8fafc;
+    color: #1e293b;
     overflow-x: hidden;
     position: relative;
     min-height: 100vh;
 }
 
-body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image:
-        radial-gradient(circle at 15% 20%, rgba(255, 255, 246, 0.4) 1px, transparent 1px),
-        radial-gradient(circle at 35% 5%, rgba(250, 206, 16, 0.3) 1.5px, transparent 1.5px),
-        radial-gradient(circle at 55% 15%, rgba(255, 255, 246, 0.5) 1px, transparent 1px),
-        radial-gradient(circle at 75% 8%, rgba(250, 206, 16, 0.4) 2px, transparent 2px),
-        radial-gradient(circle at 85% 25%, rgba(255, 255, 246, 0.3) 1px, transparent 1px),
-        radial-gradient(circle at 25% 35%, rgba(186, 28, 22, 0.2) 2px, transparent 2px),
-        radial-gradient(circle at 45% 30%, rgba(255, 255, 246, 0.6) 1px, transparent 1px),
-        radial-gradient(circle at 65% 40%, rgba(250, 206, 16, 0.3) 1.5px, transparent 1.5px),
-        radial-gradient(circle at 95% 35%, rgba(255, 255, 246, 0.4) 1px, transparent 1px),
-        radial-gradient(circle at 20% 45%, rgba(186, 28, 22, 0.3) 1.5px, transparent 1.5px);
-    background-size: 100% 60%;
-    background-repeat: no-repeat;
-    background-position: top;
-    pointer-events: none;
-    z-index: 0;
-    will-change: opacity;
-    animation: twinkle 5s infinite ease-in-out;
-}
-
-/* Mobile Optimization for Stars */
-@media (max-width: 768px) {
-    body::before {
-        background-image:
-            radial-gradient(circle at 20% 20%, rgba(255, 255, 246, 0.5) 1.5px, transparent 1.5px),
-            radial-gradient(circle at 50% 15%, rgba(250, 206, 16, 0.4) 1.5px, transparent 1.5px),
-            radial-gradient(circle at 80% 25%, rgba(255, 255, 246, 0.4) 1.5px, transparent 1.5px);
-        animation: none;
-        opacity: 0.8;
-    }
-}
-
-body::after {
-    content: '';
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 45%;
-    background:
-        linear-gradient(to bottom,
-            transparent 0%,
-            rgba(4, 36, 147, 0.2) 20%,
-            rgba(2, 18, 77, 0.6) 60%,
-            rgba(2, 12, 43, 0.9) 100%),
-        repeating-linear-gradient(0deg,
-            transparent,
-            transparent 39px,
-            rgba(250, 206, 16, 0.08) 39px,
-            rgba(250, 206, 16, 0.15) 40px),
-        repeating-linear-gradient(90deg,
-            transparent,
-            transparent 39px,
-            rgba(250, 206, 16, 0.08) 39px,
-            rgba(250, 206, 16, 0.15) 40px);
-    background-size: 100% 100%, 60px 60px, 60px 60px;
-    transform: perspective(400px) rotateX(45deg);
-    transform-origin: bottom;
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* Mobile Optimization for Grid */
-@media (max-width: 768px) {
-    body::after {
-        transform: none;
-        height: 30%;
-        background:
-            linear-gradient(to bottom, transparent, rgba(2, 12, 43, 0.95)),
-            repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(250, 206, 16, 0.05) 39px, rgba(250, 206, 16, 0.1) 40px),
-            repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(250, 206, 16, 0.05) 39px, rgba(250, 206, 16, 0.1) 40px);
-    }
-}
-
-/* Custom Scrollbar */
+/* Custom Scrollbar - Clean */
 ::-webkit-scrollbar {
-    width: 12px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #111;
-    border-left: 2px solid #333;
+    background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #FF005C;
-    border: 2px solid black;
+    background: #cbd5e1;
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #D1004B;
+    background: #94a3b8;
 }
 
 /* Animations */
