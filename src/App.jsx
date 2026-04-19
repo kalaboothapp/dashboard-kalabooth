@@ -8,11 +8,9 @@ import NotFound from './pages/NotFound';
 
 // Lazy load admin pages
 const FrameManager = lazy(() => import('./pages/admin/FrameManager'));
-const CampaignManager = lazy(() => import('./pages/admin/CampaignManager'));
 const FrameEditor = lazy(() => import('./pages/admin/FrameEditor'));
-const LinkManager = lazy(() => import('./pages/admin/LinkManager'));
 const FilterManager = lazy(() => import('./pages/admin/FilterManager'));
-const LetterManager = lazy(() => import('./pages/admin/LetterManager'));
+const ThemeManager = lazy(() => import('./pages/admin/ThemeManager'));
 const Login = lazy(() => import('./pages/Login'));
 
 // Simple Loading Component
@@ -42,12 +40,11 @@ function App() {
                 </AdminRoute>
               }>
                 <Route path="/" element={<FrameManager />} />
-                <Route path="/campaigns" element={<CampaignManager />} />
+                <Route path="/admin/frames" element={<Navigate to="/" replace />} />
                 <Route path="/frames/new" element={<FrameEditor />} />
                 <Route path="/frames/edit/:id" element={<FrameEditor />} />
-                <Route path="/links" element={<LinkManager />} />
                 <Route path="/filters" element={<FilterManager />} />
-                <Route path="/letters" element={<LetterManager />} />
+                <Route path="/theme" element={<ThemeManager />} />
               </Route>
 
               <Route path="/login" element={<Login />} />

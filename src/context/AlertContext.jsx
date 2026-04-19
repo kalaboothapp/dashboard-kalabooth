@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import * as Icons from '@phosphor-icons/react';
 
 const AlertContext = createContext();
 
@@ -59,9 +59,9 @@ const GameAlert = ({ isOpen, message, type, title, onClose }) => {
     if (!isOpen) return null;
 
     const colors = {
-        success: { bg: 'bg-[#00E055]', border: 'border-black', icon: <CheckCircle size={48} className="text-black" /> },
-        error: { bg: 'bg-[#FF2A2A]', border: 'border-black', icon: <AlertCircle size={48} className="text-white" /> },
-        info: { bg: 'bg-[#face10]', border: 'border-black', icon: <Info size={48} className="text-black" /> }
+        success: { bg: 'bg-[#00E055]', border: 'border-black', icon: <Icons.CheckCircle weight="bold" size={48} className="text-black" /> },
+        error: { bg: 'bg-[#FF2A2A]', border: 'border-black', icon: <Icons.WarningCircle weight="bold" size={48} className="text-white" /> },
+        info: { bg: 'bg-[#face10]', border: 'border-black', icon: <Icons.Info weight="bold" size={48} className="text-black" /> }
     };
 
     const style = colors[type] || colors.info;
@@ -79,7 +79,7 @@ const GameAlert = ({ isOpen, message, type, title, onClose }) => {
                         {/* Header Bar */}
                         <div className="bg-black/10 p-2 flex justify-end">
                             <button onClick={onClose} className="text-black/50 hover:text-black">
-                                <X size={24} />
+                                <Icons.X size={24} weight="bold" />
                             </button>
                         </div>
 

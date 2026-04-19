@@ -4,9 +4,10 @@
  * Uses connected-component labeling (BFS flood-fill) on the alpha channel.
  */
 
-const SAMPLE_SIZE = 300;
-const ALPHA_THRESHOLD = 30;
-const MIN_REGION_PERCENT = 1.5;
+const SAMPLE_SIZE = 600; // Meningkatkan resolusi scan untuk akurasi lebih tinggi
+const ALPHA_THRESHOLD = 15; // Lebih sensitif terhadap pinggiran transparan yang halus
+const MIN_REGION_PERCENT = 1.0; 
+const OVERSCAN = 0.4; // Menambahkan sedikit ekspansi (0.4%) agar kotak foto "masuk" ke bawah bingkai
 
 /**
  * Load an image (URL or data URL) into an HTMLImageElement
@@ -104,13 +105,21 @@ export async function detectSlots(imageSrc) {
             const areaPct = (r.pixelCount / totalArea) * 100;
             return areaPct >= MIN_REGION_PERCENT;
         })
-        .map((r, idx) => ({
-            id: Date.now() + idx,
-            x: Math.round((r.minX / w) * 100),
-            y: Math.round((r.minY / h) * 100),
-            width: Math.round(((r.maxX - r.minX + 1) / w) * 100),
-            height: Math.round(((r.maxY - r.minY + 1) / h) * 100),
-        }))
+        .map((r, idx) => {
+            const x = (r.minX / w) * 100;
+            const y = (r.minY / h) * 100;
+            const width = ((r.maxX - r.minX + 1) / w) * 100;
+            const height = ((r.maxY - r.minY + 1) / h) * 100;
+
+            // Terapkan OVERSCAN: kotak sedikit dilebihkan agar menjepit frame
+            return {
+                id: Date.now() + idx,
+                x: Number((x - OVERSCAN).toFixed(2)),
+                y: Number((y - OVERSCAN).toFixed(2)),
+                width: Number((width + (OVERSCAN * 2)).toFixed(2)),
+                height: Number((height + (OVERSCAN * 2)).toFixed(2)),
+            };
+        })
         .sort((a, b) => {
             // Sort: top-to-bottom, then left-to-right
             if (Math.abs(a.y - b.y) < 5) return a.x - b.x;

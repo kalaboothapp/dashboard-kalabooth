@@ -10,57 +10,52 @@ export const AuthProvider = ({ children }) => {
     const { showAlert } = useAlert();
 
     useEffect(() => {
-        if (!supabase) {
+        const pinSession = localStorage.getItem('kb_admin_session');
+        if (pinSession === 'active') {
+             // Mock admin user since Anonymous Sign-in is disabled in Supabase
+             setUser({ id: 'admin', email: 'admin@local', role: 'admin' });
+             setLoading(false);
+        } else {
             setLoading(false);
-            return;
         }
-
-        // Check active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
-            setLoading(false);
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-        });
-
-        return () => subscription.unsubscribe();
     }, []);
 
-    const signInWithGoogle = async () => {
-        if (!supabase) {
-            showAlert("Backend not configured. Cannot login.", "error");
-            return;
-        }
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin,
+    const loginWithPin = async (inputPin) => {
+        if (!supabase) return false;
+        
+        try {
+            const { data, error } = await supabase
+                .from('global_settings')
+                .select('*')
+                .eq('id', 1)
+                .single();
+
+            const targetPin = data?.admin_password || '1945';
+
+            if (inputPin === targetPin) {
+                // Bypass Supabase Auth and use local session
+                localStorage.setItem('kb_admin_session', 'active');
+                setUser({ id: 'admin', email: 'admin@local', role: 'admin' });
+                return true;
+            } else {
+                showAlert("Invalid Master PIN!", "error");
+                return false;
             }
-        });
-        if (error) {
-            console.error("Login Error:", error);
-            showAlert(`Login Failed: ${error.message}\n(Hint: Did you enable the Google Provider in your Supabase Dashboard?)`, "error");
+        } catch (err) {
+            console.error(err);
+            showAlert("Connection Error: " + err.message, "error");
+            return false;
         }
     };
 
     const signOut = async () => {
-        if (!supabase) return;
-        await supabase.auth.signOut();
-    };
-
-    const signInAnonymously = async () => {
-        if (!supabase) return;
-        const { error } = await supabase.auth.signInAnonymously();
-        if (error) {
-            console.error(error);
-            showAlert(`Guest Login Failed: ${error.message}\n(Make sure 'Anonymous Sign-ins' is enabled in Supabase Auth Providers)`, "error");
-        }
+        localStorage.removeItem('kb_admin_session');
+        setUser(null);
+        if (supabase) await supabase.auth.signOut();
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, signInWithGoogle, signInAnonymously, signOut }}>
+        <AuthContext.Provider value={{ user, loading, loginWithPin, signOut }}>
             {children}
         </AuthContext.Provider>
     );
