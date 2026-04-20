@@ -52,7 +52,9 @@ export const createFrame = async (frameData) => {
     }
 
     let thumbnailUrl = null;
-    if (frameData.thumbnailFile) {
+    if (frameData.externalThumbnail) {
+        thumbnailUrl = frameData.externalThumbnail;
+    } else if (frameData.thumbnailFile) {
         thumbnailUrl = await uploadFile(frameData.thumbnailFile);
     }
 
@@ -94,6 +96,7 @@ export const updateFrame = async (id, updates) => {
     delete dbUpdates.thumbnailFile;
     delete dbUpdates.externalImage; // Clean up payload
     delete dbUpdates.externalImageB;
+    delete dbUpdates.externalThumbnail;
 
     if (updates.externalImage) {
         dbUpdates.image_url = updates.externalImage;
@@ -117,7 +120,9 @@ export const updateFrame = async (id, updates) => {
         dbUpdates.layout_config = normalized;
     }
 
-    if (updates.thumbnailFile) {
+    if (updates.externalThumbnail) {
+        dbUpdates.thumbnail_url = updates.externalThumbnail;
+    } else if (updates.thumbnailFile) {
         dbUpdates.thumbnail_url = await uploadFile(updates.thumbnailFile);
     }
 

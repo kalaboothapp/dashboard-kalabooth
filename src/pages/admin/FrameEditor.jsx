@@ -41,6 +41,11 @@ const FrameEditor = () => {
     const [useExternalUrlB, setUseExternalUrlB] = useState(isExistingExternalUrlB || false);
     const [externalUrlB, setExternalUrlB] = useState(isExistingExternalUrlB ? existingBImage : '');
 
+    // External URL State — Studio Thumbnail
+    const isExistingExternalThumb = editingFrame?.thumbnail_url && !editingFrame.thumbnail_url.includes('supabase.co');
+    const [useExternalThumb, setUseExternalThumb] = useState(isExistingExternalThumb || false);
+    const [externalThumb, setExternalThumb] = useState(isExistingExternalThumb ? editingFrame.thumbnail_url : '');
+
     // Layout Config: Object { a: [], b: [] }
     const [layouts, setLayouts] = useState(() => {
         const config = editingFrame?.layout_config;
@@ -234,6 +239,7 @@ const FrameEditor = () => {
                 thumbnail_url: thumbnailPreview,
                 externalImage: (useExternalUrl && externalUrl.trim()) ? externalUrl.trim() : null,
                 externalImageB: (useExternalUrlB && externalUrlB.trim()) ? externalUrlB.trim() : null,
+                externalThumbnail: (useExternalThumb && externalThumb.trim()) ? externalThumb.trim() : null,
                 theme_id: themeId,
                 audio_url: frameAudioUrl.trim() || null,
                 animation_type: animationType
@@ -528,7 +534,16 @@ const FrameEditor = () => {
                                         </div>
 
                                         <div className="relative group/thumb">
-                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Studio Thumbnail</label>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Studio Thumbnail</label>
+                                                <button
+                                                    onClick={() => setUseExternalThumb(!useExternalThumb)}
+                                                    className="text-[9px] font-black text-indigo-600 hover:text-indigo-700 transition-colors uppercase tracking-widest"
+                                                >
+                                                    {useExternalThumb ? 'Switch to Upload' : 'Use External URL'}
+                                                </button>
+                                            </div>
+
                                             <div className="flex gap-4 items-center">
                                                 <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                                                     {thumbnailPreview ? (
@@ -537,16 +552,32 @@ const FrameEditor = () => {
                                                         <Icons.Image size={20} weight="duotone" className="text-slate-200" />
                                                     )}
                                                 </div>
+                                                
                                                 <div className="relative flex-1">
-                                                    <input
-                                                        type="file"
-                                                        onChange={e => handleFileChange(e, 'thumbnail')}
-                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                                                    />
-                                                    <div className="w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl py-4 flex flex-col items-center justify-center gap-1 group-hover/thumb:border-indigo-300 transition-all">
-                                                        <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Replace Art</span>
-                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">PNG / WEBP / JPG</span>
-                                                    </div>
+                                                    {useExternalThumb ? (
+                                                        <input
+                                                            type="text"
+                                                            value={externalThumb}
+                                                            onChange={(e) => {
+                                                                setExternalThumb(e.target.value);
+                                                                setThumbnailPreview(e.target.value);
+                                                            }}
+                                                            placeholder="https://cdn.jsdelivr.net/gh/user/repo@main/thumb.png"
+                                                            className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-100 focus:bg-white rounded-2xl px-5 py-3.5 text-slate-800 outline-none transition-all font-black text-xs"
+                                                        />
+                                                    ) : (
+                                                        <>
+                                                            <input
+                                                                type="file"
+                                                                onChange={e => handleFileChange(e, 'thumbnail')}
+                                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                                            />
+                                                            <div className="w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl py-4 flex flex-col items-center justify-center gap-1 group-hover/thumb:border-indigo-300 transition-all">
+                                                                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Replace Art</span>
+                                                                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">PNG / WEBP / JPG</span>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
