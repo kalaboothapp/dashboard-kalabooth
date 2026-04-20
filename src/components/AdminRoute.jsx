@@ -6,7 +6,7 @@ const AdminRoute = ({ children }) => {
     const { user, loading, signOut } = useAuth();
 
     if (loading) {
-        return <div className="h-screen bg-neutral-900 flex items-center justify-center text-white font-titan animate-pulse">Scanning Bio-metrics...</div>;
+        return <div className="h-screen bg-neutral-900 flex items-center justify-center text-white font-inter animate-pulse">Scanning Bio-metrics...</div>;
     }
 
     if (!user) {
@@ -17,3 +17,4 @@ const AdminRoute = ({ children }) => {
 };
 
 export default AdminRoute;
+

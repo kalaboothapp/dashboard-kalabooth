@@ -10,7 +10,8 @@ import NotFound from './pages/NotFound';
 const FrameManager = lazy(() => import('./pages/admin/FrameManager'));
 const FrameEditor = lazy(() => import('./pages/admin/FrameEditor'));
 const FilterManager = lazy(() => import('./pages/admin/FilterManager'));
-const ThemeManager = lazy(() => import('./pages/admin/ThemeManager'));
+const SecuritySettings = lazy(() => import('./pages/admin/SecuritySettings'));
+const SessionHistory = lazy(() => import('./pages/admin/SessionHistory'));
 const Login = lazy(() => import('./pages/Login'));
 
 // Simple Loading Component
@@ -44,7 +45,8 @@ function App() {
                 <Route path="/frames/new" element={<FrameEditor />} />
                 <Route path="/frames/edit/:id" element={<FrameEditor />} />
                 <Route path="/filters" element={<FilterManager />} />
-                <Route path="/theme" element={<ThemeManager />} />
+                <Route path="/security" element={<SecuritySettings />} />
+                <Route path="/sessions" element={<SessionHistory />} />
               </Route>
 
               <Route path="/login" element={<Login />} />
@@ -60,3 +62,4 @@ function App() {
 }
 
 export default App;
+

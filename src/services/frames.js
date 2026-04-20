@@ -130,7 +130,7 @@ export const updateFrame = async (id, updates) => {
         .from('frames')
         .update(dbUpdates)
         .eq('id', id)
-        .select()
+        .select('id, name, status, image_url')
         .single();
 
     if (error) throw error;

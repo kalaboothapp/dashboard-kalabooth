@@ -1,9 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAlert } from '../../context/AlertContext';
-import * as Icons from '@phosphor-icons/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    UploadIcon, 
+    TrashIcon, 
+    MixIcon, 
+    MagicWandIcon, 
+    UpdateIcon,
+    CheckCircledIcon,
+    CrossCircledIcon,
+    ShadowIcon
+} from '@radix-ui/react-icons';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { uploadToGitHub } from '../../lib/github';
+import { Button } from '../../components/ui/button';
+import { cn } from '../../lib/utils';
+import { Card } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
 
 const FilterManager = () => {
     const { showAlert } = useAlert();
@@ -58,28 +71,21 @@ const FilterManager = () => {
 
         setUploading(true);
         try {
-            // 1. Read file
-            const text = await file.text();
-
-            let storagePath, thumbnailUrl;
+            let storagePath;
 
             if (import.meta.env.VITE_GITHUB_TOKEN) {
-                // 3 & 4. Upload to GitHub instead
                 storagePath = await uploadToGitHub(file, 'luts');
             } else {
-                // 3. Upload .cube to Storage
                 const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
                 const { error: uploadError } = await supabase.storage
                     .from('luts')
                     .upload(fileName, file, { cacheControl: '31536000' });
                 if (uploadError) throw uploadError;
 
-                // 4. Get Public URL
                 const { data: publicUrlData1 } = supabase.storage.from('luts').getPublicUrl(fileName);
                 storagePath = publicUrlData1.publicUrl;
             }
 
-            // 6. Save to DB
             const { error: dbError } = await supabase.from('luts').insert({
                 name: file.name.replace('.cube', ''),
                 storage_path: storagePath,
@@ -97,7 +103,6 @@ const FilterManager = () => {
             setUploading(false);
         }
     };
-
 
     const handleDelete = async (id) => {
         if (!confirm('Are you sure you want to delete this filter?')) return;
@@ -122,79 +127,85 @@ const FilterManager = () => {
             setFilters(prev => prev.map(f =>
                 f.id === id ? { ...f, is_active: !currentStatus } : f
             ));
+            showAlert(`Filter ${!currentStatus ? 'enabled' : 'disabled'}`, 'success');
         } catch (error) {
             showAlert(error.message, 'error');
         }
     };
 
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 font-inter">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Filter Library</h1>
-                    <p className="text-slate-500 font-medium mt-2">Upload and curate custom .cube LUT filters to define your booth's look.</p>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Filter Library</h1>
+                    <p className="text-slate-500 font-bold mt-2">Upload and curate custom .cube LUT filters to define your booth's look.</p>
                 </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-white px-4 py-2 rounded-full border border-slate-100 shadow-sm">
-                    <Icons.Image size={14} weight="duotone" className="text-indigo-500" />
-                    {filters.length} FILTERS READY
-                </div>
+                <Badge variant="secondary" className="px-5 py-2 text-xs">
+                    <MixIcon className="mr-2" /> {filters.length} FILTERS READY
+                </Badge>
             </div>
 
-            {/* Upload Zone - Hand-Crafted "Island" */}
-            <div
-                className={`relative group bg-white rounded-[40px] p-1 border-2 transition-all duration-500 ${dragActive 
-                    ? 'border-indigo-400 shadow-2xl shadow-indigo-500/10 scale-[1.01]' 
-                    : 'border-slate-50 shadow-depth hover:border-indigo-200'
-                    }`}
+            {/* Upload Zone */}
+            <motion.div
+                layout
+                className={cn(
+                    "relative group bg-white rounded-[2.5rem] p-1 border-2 transition-all duration-500",
+                    dragActive 
+                        ? 'border-kala-red shadow-2xl shadow-kala-red/10 scale-[1.01]' 
+                        : 'border-slate-50 shadow-xl hover:border-slate-200'
+                )}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
             >
-                <div className="rounded-[36px] border-2 border-dashed border-slate-100 bg-slate-50/30 p-12 text-center transition-colors group-hover:bg-indigo-50/10">
+                <div className="rounded-[2.2rem] border-2 border-dashed border-slate-100 bg-slate-50/50 p-12 text-center transition-colors group-hover:bg-slate-50">
                     {uploading ? (
                         <div className="flex flex-col items-center gap-6 py-6">
                             <div className="relative">
-                                <Icons.CircleNotch className="animate-spin text-indigo-600" size={64} weight="bold" />
+                                <ShadowIcon className="animate-spin text-kala-red" width={64} height={64} />
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <Icons.Lightning size={24} weight="fill" className="text-indigo-400 animate-pulse" />
+                                    <MagicWandIcon width={24} height={24} className="text-kala-red/40 animate-pulse" />
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <p className="text-xl font-extrabold text-slate-800">Processing Magic...</p>
-                                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Optimizing & syncing to cloud</p>
+                            <div className="space-y-1">
+                                <p className="text-2xl font-black text-slate-900">Processing Magic...</p>
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none">Syncing LUT to Cloud Collection</p>
                             </div>
                         </div>
                     ) : (
                         <div className="flex flex-col items-center gap-6">
-                            <div className="w-24 h-24 rounded-[32px] bg-white shadow-depth flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
-                                <Icons.UploadSimple size={36} weight="duotone" className="text-indigo-600" />
+                            <div className="w-24 h-24 rounded-[2rem] bg-white shadow-xl flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
+                                <UploadIcon width={36} height={36} className="text-kala-red" />
                             </div>
                             <div>
-                                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Drop your .cube files here</h3>
-                                <p className="text-slate-500 font-medium mt-2 max-w-sm mx-auto">
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Drop your .cube files here</h3>
+                                <p className="text-slate-500 font-bold mt-2 max-w-sm mx-auto">
                                     Upload your custom LUTs to define cinematic looks for your event gallery.
                                 </p>
                             </div>
                             <div className="flex items-center gap-4 mt-2">
-                                <label className="btn-pix-primary cursor-pointer">
-                                    Browse Library
-                                    <input type="file" accept=".cube" className="hidden" onChange={(e) => handleFileUpload(e.target.files[0])} />
+                                <label>
+                                    <Button asChild variant="kala" className="cursor-pointer">
+                                        <span>
+                                            <UploadIcon className="mr-2" /> Browse Library
+                                            <input type="file" accept=".cube" className="hidden" onChange={(e) => handleFileUpload(e.target.files[0])} />
+                                        </span>
+                                    </Button>
                                 </label>
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">or drag them in</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">or drag them in</span>
                             </div>
                         </div>
                     )}
                 </div>
-            </div>
-
+            </motion.div>
 
             {/* Filter List */}
             {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
-                    <Icons.CircleNotch className="animate-spin text-indigo-400" size={32} weight="bold" />
-                    <p className="font-bold text-sm uppercase tracking-widest">Loading Filter Core...</p>
+                <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-4">
+                    <UpdateIcon className="animate-spin text-kala-red" width={32} height={32} />
+                    <p className="font-black text-xs uppercase tracking-[0.2em]">Synchronizing Presets...</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8">
@@ -206,63 +217,74 @@ const FilterManager = () => {
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 key={filter.id} 
-                                className={`card-premium group flex flex-col group p-3 ${!filter.is_active ? 'opacity-70 bg-slate-50/50' : ''}`}
+                                className="group"
                             >
-                                {/* Icon Representative - Modern Abstract look */}
-                                <div className="aspect-video bg-slate-50 relative rounded-[28px] border border-slate-100 flex items-center justify-center group-hover:bg-indigo-50 transition-colors duration-500 overflow-hidden">
-                                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none">
-                                        <Icons.Sparkle size={120} weight="fill" className="absolute -bottom-4 -right-4" />
-                                    </div>
-
-                                    <div className="w-14 h-14 rounded-2xl bg-white shadow-soft flex items-center justify-center text-indigo-500 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500 relative z-10">
-                                        <Icons.Sparkle size={28} weight="duotone" />
-                                    </div>
-                                    
-                                    {/* Glass Overlay Actions */}
-                                    <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                                        <button
-                                            onClick={() => handleDelete(filter.id)}
-                                            className="w-9 h-9 bg-white/90 backdrop-blur-md text-rose-500 rounded-xl shadow-depth flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-90"
-                                            title="Delete Filter"
-                                        >
-                                            <Icons.Trash size={16} weight="duotone" />
-                                        </button>
-                                    </div>
-
-                                    {!filter.is_active && (
-                                        <div className="absolute inset-0 bg-slate-900/10 backdrop-blur-[1px] flex items-center justify-center z-30">
-                                            <span className="bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Hidden</span>
+                                <Card className={cn(
+                                    "flex flex-col p-4 h-full relative overflow-hidden transition-all duration-500",
+                                    !filter.is_active ? 'opacity-60 bg-slate-50/50 grayscale-[0.5]' : ''
+                                )}>
+                                    {/* Icon Representative - Modern Abstract look */}
+                                    <div className="aspect-video bg-slate-100/50 relative rounded-[1.5rem] border border-slate-100 flex items-center justify-center group-hover:bg-white transition-colors duration-500 overflow-hidden">
+                                        <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
+                                            <MagicWandIcon className="absolute -bottom-6 -right-6" width={120} height={120} />
                                         </div>
-                                    )}
-                                </div>
 
-                                {/* Info - Human-made spacing */}
-                                <div className="px-3 pt-6 pb-2 flex flex-col flex-1">
-                                    <div className="flex items-start justify-between gap-2 mb-4">
-                                        <h3 className="font-extrabold text-slate-900 leading-tight truncate flex-1" title={filter.name}>
-                                            {filter.name}
-                                        </h3>
-                                        {filter.is_active && <Icons.Sparkle size={16} weight="duotone" className="text-indigo-400" />}
+                                        <div className="w-14 h-14 rounded-2xl bg-white shadow-lg flex items-center justify-center text-kala-red group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500 relative z-10">
+                                            <MagicWandIcon width={28} height={28} />
+                                        </div>
+                                        
+                                        {/* Actions */}
+                                        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                                            <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                className="h-9 w-9 rounded-xl shadow-lg"
+                                                onClick={() => handleDelete(filter.id)}
+                                            >
+                                                <TrashIcon />
+                                            </Button>
+                                        </div>
+
+                                        {!filter.is_active && (
+                                            <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[1px] flex items-center justify-center z-30">
+                                                <Badge variant="secondary" className="bg-white/90 border-none px-3 text-[9px] shadow-lg">Inhibitted</Badge>
+                                            </div>
+                                        )}
                                     </div>
-                                    
-                                    <button
-                                        onClick={() => handleToggleActive(filter.id, filter.is_active)}
-                                        className={`mt-auto w-full py-3 rounded-2xl font-bold text-[11px] tracking-wider transition-all active:scale-95 ${filter.is_active
-                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
-                                            : 'bg-white border border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300'
-                                            }`}
-                                    >
-                                        {filter.is_active ? 'ENABLED' : 'DISABLED'}
-                                    </button>
-                                </div>
+
+                                    {/* Info */}
+                                    <div className="pt-6 pb-2 px-1 flex flex-col flex-1">
+                                        <div className="flex items-start justify-between gap-2 mb-6">
+                                            <h3 className="font-black text-slate-900 leading-tight truncate flex-1" title={filter.name}>
+                                                {filter.name}
+                                            </h3>
+                                            {filter.is_active ? (
+                                                <CheckCircledIcon className="text-emerald-500 shrink-0 mt-0.5" width={18} height={18} />
+                                            ) : (
+                                                <CrossCircledIcon className="text-slate-300 shrink-0 mt-0.5" width={18} height={18} />
+                                            )}
+                                        </div>
+                                        
+                                        <Button
+                                            onClick={() => handleToggleActive(filter.id, filter.is_active)}
+                                            variant={filter.is_active ? "kala" : "outline"}
+                                            className="mt-auto w-full text-[10px] uppercase font-black tracking-widest"
+                                        >
+                                            {filter.is_active ? 'ENABLED' : 'DISABLED'}
+                                        </Button>
+                                    </div>
+                                </Card>
                             </motion.div>
                         ))}
                     </AnimatePresence>
                     
                     {filters.length === 0 && (
-                        <div className="col-span-full py-24 text-center bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-100 rounded-[40px]">
-                            <Icons.Image className="mx-auto mb-4 text-slate-200" size={64} weight="duotone" />
-                            <p className="font-bold text-slate-400 uppercase tracking-widest text-sm">No filters in your collection</p>
+                        <div className="col-span-full py-24 text-center bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center gap-4">
+                            <MixIcon className="text-slate-200" width={64} height={64} />
+                            <div>
+                                <p className="font-black text-slate-800 uppercase tracking-widest text-sm">No filters in your collection</p>
+                                <p className="text-xs font-bold text-slate-400 mt-1">Start by dragging a .cube file above.</p>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -272,3 +294,4 @@ const FilterManager = () => {
 };
 
 export default FilterManager;
+

@@ -3,7 +3,8 @@ import { useAlert } from '../../context/AlertContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createFrame, updateFrame } from '../../services/frames';
 import * as Icons from '@phosphor-icons/react';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+
 import { detectSlots } from '../../utils/slotDetector';
 
 const FrameEditor = () => {
@@ -261,7 +262,8 @@ const FrameEditor = () => {
         }
     };
 
-    const selectedSlot = photoSlots.find(s => s.id === selectedSlotId);
+    // const selectedSlot = photoSlots.find(s => s.id === selectedSlotId);
+
 
     // Resize handle component
     const ResizeHandle = ({ slotId, position }) => {
@@ -840,3 +842,4 @@ const FrameEditor = () => {
 };
 
 export default FrameEditor;
+

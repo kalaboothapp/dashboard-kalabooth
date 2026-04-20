@@ -1,9 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { useAlert } from '../../context/AlertContext';
 import { useNavigate } from 'react-router-dom';
-import * as Icons from '@phosphor-icons/react';
-import { motion } from 'framer-motion';
+import { 
+    PlusIcon, 
+    HeightIcon, 
+    CheckIcon, 
+    Pencil1Icon, 
+    TrashIcon, 
+    CaretUpIcon, 
+    CaretDownIcon,
+    UpdateIcon,
+    ExclamationTriangleIcon,
+    MoveIcon,
+    EyeOpenIcon,
+    EyeNoneIcon
+} from '@radix-ui/react-icons';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { updateFrameOrder, getFrames, deleteFrame, updateFrame } from '../../services/frames';
+import { Button } from '../../components/ui/button';
+import { cn } from '../../lib/utils';
+import { Card, CardContent } from '../../components/ui/card';
+import { Badge } from '../../components/ui/badge';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip';
 
 const FrameManager = () => {
     const navigate = useNavigate();
@@ -34,6 +52,7 @@ const FrameManager = () => {
         try {
             await deleteFrame(id, imageUrl);
             setFrames(frames.filter(f => f.id !== id));
+            showAlert("Frame deleted successfully.", "success");
         } catch (error) {
             console.error(error);
             showAlert("Failed to delete.", "error");
@@ -41,27 +60,55 @@ const FrameManager = () => {
     };
 
     const toggleStatus = async (frame) => {
+        // If it was hidden, unhide it first to active
+        if (frame.status === 'hidden') {
+            try {
+                const updated = await updateFrame(frame.id, { status: 'active' });
+                setFrames(frames.map(f => f.id === frame.id ? updated : f));
+                showAlert("Frame unhidden and set to ACTIVE", "success");
+            } catch (error) {
+                showAlert("Failed to unhide.", "error");
+            }
+            return;
+        }
+
         const newStatus = frame.status === 'active' ? 'coming_soon' : 'active';
         try {
             const updated = await updateFrame(frame.id, { status: newStatus });
             setFrames(frames.map(f => f.id === frame.id ? updated : f));
+            showAlert(`Status updated to ${newStatus.replace('_', ' ')}`, "success");
         } catch (error) {
             console.error(error);
             showAlert("Failed to update status.", "error");
         }
     };
 
+    const toggleVisibility = async (frame) => {
+        const isHidden = frame.status === 'hidden';
+        const newStatus = isHidden ? 'active' : 'hidden';
+        
+        try {
+            const updated = await updateFrame(frame.id, { status: newStatus });
+            setFrames(frames.map(f => f.id === frame.id ? updated : f));
+            showAlert(isHidden ? "Frame is now VISIBLE" : "Frame is now HIDDEN", "success");
+        } catch (error) {
+            console.error("Visibility Update Error:", error);
+            showAlert("Error: " + (error.message || "Gagal update status"), "error");
+        }
+    };
+
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex flex-col md:flex-row justify-between items-end gap-6">
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 font-inter">
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
-                    <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">Frame Collection</h1>
-                    <p className="text-slate-500 font-medium mt-2">Manage and prioritize your photobooth design assets.</p>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">Frame Collection</h1>
+                    <p className="text-slate-500 font-bold mt-2">Manage and prioritize your photobooth design assets.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     {isReordering ? (
                         <>
-                            <button
+                            <Button
                                 onClick={async () => {
                                     setLoading(true);
                                     await updateFrameOrder(frames);
@@ -69,38 +116,39 @@ const FrameManager = () => {
                                     setIsReordering(false);
                                     showAlert("Order Saved!", "success");
                                 }}
-                                className="px-6 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all flex items-center gap-2 active:scale-95"
+                                variant="kala"
+                                className="px-6"
                             >
-                                <Icons.FloppyDisk size={18} weight="duotone" /> Save Order
-                            </button>
-                            <button
+                                <CheckIcon className="mr-2" /> Save Order
+                            </Button>
+                            <Button
                                 onClick={() => {
                                     setFrames(originalOrder);
                                     setIsReordering(false);
                                 }}
-                                className="px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-2xl text-sm font-bold hover:bg-slate-50 transition-all active:scale-95"
+                                variant="outline"
                             >
                                 Cancel
-                            </button>
+                            </Button>
                         </>
                     ) : (
                         <>
-                            <button
+                            <Button
                                 onClick={() => {
                                     setOriginalOrder([...frames]);
                                     setIsReordering(true);
                                 }}
-                                className="px-5 py-3 bg-white border border-slate-100 text-slate-600 rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+                                variant="outline"
+                                className="bg-white border-slate-200"
                             >
-                                <Icons.ArrowsDownUp size={18} weight="duotone" className="text-indigo-500" /> Sort Priority
-                            </button>
-                            <button
+                                <HeightIcon className="mr-2 rotate-90" /> Sort Priority
+                            </Button>
+                            <Button
                                 onClick={() => navigate('/frames/new')}
-                                className="btn-pix-primary"
-                                disabled={isReordering}
+                                variant="kala"
                             >
-                                <Icons.Plus size={20} weight="bold" /> Upload New Frame
-                            </button>
+                                <PlusIcon className="mr-2" /> Upload New Frame
+                            </Button>
                         </>
                     )}
                 </div>
@@ -108,132 +156,207 @@ const FrameManager = () => {
 
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-24 text-slate-400 gap-4">
-                    <Icons.CircleNotch className="animate-spin text-indigo-400" size={32} weight="duotone" />
-                    <p className="font-bold text-sm uppercase tracking-widest">Synchronizing Frames...</p>
+                    <UpdateIcon className="animate-spin text-kala-red" width={32} height={32} />
+                    <p className="font-black text-xs uppercase tracking-[0.2em]">Synchronizing Studio...</p>
                 </div>
             ) : isReordering ? (
-                <div className="space-y-4 max-w-4xl mx-auto">
-                    {frames.map((frame, index) => (
-                        <motion.div 
-                            layout
-                            key={frame.id} 
-                            className="bg-white p-5 rounded-[24px] border border-slate-100 flex items-center gap-6 shadow-soft relative group"
-                        >
-                            <div className="flex flex-col gap-1">
-                                <button 
-                                    onClick={() => {
-                                        if (index === 0) return;
-                                        const newFrames = [...frames];
-                                        [newFrames[index], newFrames[index - 1]] = [newFrames[index - 1], newFrames[index]];
-                                        setFrames(newFrames);
-                                    }}
-                                    disabled={index === 0}
-                                    className="p-1 hover:bg-slate-50 rounded-md text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-all"
-                                >
-                                    <Icons.CaretUp size={18} weight="bold" />
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        if (index === frames.length - 1) return;
-                                        const newFrames = [...frames];
-                                        [newFrames[index], newFrames[index + 1]] = [newFrames[index + 1], newFrames[index]];
-                                        setFrames(newFrames);
-                                    }}
-                                    disabled={index === frames.length - 1}
-                                    className="p-1 hover:bg-slate-50 rounded-md text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-all"
-                                >
-                                    <Icons.CaretDown size={18} weight="bold" />
-                                </button>
-                            </div>
-                            <div className="h-16 w-16 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 overflow-hidden shadow-sm">
-                                <img src={frame.image_url} alt={frame.name} className="w-full h-full object-contain p-2" />
-                            </div>
-                            <div className="flex-1">
-                                <div className="font-extrabold text-slate-900 text-lg leading-none">{frame.name}</div>
-                                <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-widest">
-                                    {frame.status.replace('_', ' ')}
+                <div className="space-y-4 max-w-4xl">
+                    <AnimatePresence mode="popLayout">
+                        {frames.map((frame, index) => (
+                            <motion.div 
+                                layout
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                key={frame.id} 
+                                className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-6 shadow-sm group hover:border-kala-red/20 transition-colors"
+                            >
+                                <div className="flex flex-col gap-1 shrink-0">
+                                    <button 
+                                        onClick={() => {
+                                            if (index === 0) return;
+                                            const newFrames = [...frames];
+                                            [newFrames[index], newFrames[index - 1]] = [newFrames[index - 1], newFrames[index]];
+                                            setFrames(newFrames);
+                                        }}
+                                        disabled={index === 0}
+                                        className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-300 hover:text-kala-red disabled:opacity-20 transition-all"
+                                    >
+                                        <CaretUpIcon width={20} height={20} />
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            if (index === frames.length - 1) return;
+                                            const newFrames = [...frames];
+                                            [newFrames[index], newFrames[index + 1]] = [newFrames[index + 1], newFrames[index]];
+                                            setFrames(newFrames);
+                                        }}
+                                        disabled={index === frames.length - 1}
+                                        className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-300 hover:text-kala-red disabled:opacity-20 transition-all"
+                                    >
+                                        <CaretDownIcon width={20} height={20} />
+                                    </button>
                                 </div>
-                            </div>
-                            <div className="ml-auto opacity-10 font-black text-4xl text-slate-900 italic select-none">
-                                #{index + 1}
-                            </div>
-                        </motion.div>
-                    ))}
+                                <div className="h-16 w-16 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 overflow-hidden shrink-0">
+                                    <img src={frame.image_url} alt={frame.name} className="w-full h-full object-contain p-2" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-black text-slate-900 text-lg leading-tight truncate">{frame.name}</div>
+                                    <Badge variant={frame.status === 'active' ? 'success' : 'secondary'} className="mt-1">
+                                        {frame.status.replace('_', ' ')}
+                                    </Badge>
+                                </div>
+                                <div className="ml-auto opacity-10 font-black text-4xl text-slate-900 italic select-none">
+                                    #{index + 1}
+                                </div>
+                                <div className="p-3 text-slate-300">
+                                    <MoveIcon width={20} height={20} />
+                                </div>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                    {frames.map((frame, index) => (
-                        <motion.div
-                            key={frame.id}
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ delay: index * 0.05 }}
-                            className={`card-premium group flex flex-col p-4 relative transition-all duration-500 ${frame.status === 'coming_soon' ? 'opacity-80' : ''}`}
-                        >
-                            <div className="aspect-[2/3] bg-slate-50 rounded-[28px] overflow-hidden relative border border-slate-100/50 flex items-center justify-center shadow-inner group-hover:bg-white transition-colors duration-500">
-                                <img src={frame.image_url} className="w-full h-full object-contain relative z-10 p-6 group-hover:scale-110 transition-transform duration-700" alt={frame.name} />
+                    <AnimatePresence mode="popLayout">
+                        {frames.map((frame, index) => (
+                            <motion.div
+                                key={frame.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="group"
+                            >
+                                <Card className={cn(
+                                    "h-full flex flex-col p-4 relative overflow-hidden transition-all duration-500",
+                                    frame.status === 'coming_soon' ? 'opacity-80 grayscale-[0.5]' : ''
+                                )}>
+                                    <div className="aspect-[2/3] bg-slate-50 rounded-[1.5rem] overflow-hidden relative border border-slate-100 flex items-center justify-center group-hover:bg-white transition-colors duration-500">
+                                        <img src={frame.image_url} className="w-full h-full object-contain relative z-10 p-6 group-hover:scale-105 transition-transform duration-700" alt={frame.name} />
 
-                                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300 z-30">
-                                    <button
-                                        onClick={() => navigate(`/frames/edit/${frame.id}`, { state: { frame } })}
-                                        className="w-10 h-10 bg-white/90 backdrop-blur-md text-slate-600 rounded-2xl shadow-depth flex items-center justify-center hover:bg-white hover:text-indigo-600 transition-all active:scale-90"
-                                    >
-                                        <Icons.Pencil size={18} weight="duotone" />
-                                    </button>
-                                    <button
-                                        onClick={() => handleDelete(frame.id, frame.image_url)}
-                                        className="w-10 h-10 bg-white/90 backdrop-blur-md text-rose-500 rounded-2xl shadow-depth flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all active:scale-90"
-                                    >
-                                        <Icons.Trash size={18} weight="duotone" />
-                                    </button>
-                                </div>
+                                        {/* Hover Actions Overlay */}
+                                        <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-300 z-[40]">
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="icon"
+                                                        className={cn(
+                                                            "h-10 w-10 backdrop-blur-md rounded-xl shadow-lg transition-all",
+                                                            frame.status === 'hidden' ? "bg-kala-red text-white hover:bg-red-600" : "bg-white text-slate-900"
+                                                        )}
+                                                        onClick={() => toggleVisibility(frame)}
+                                                    >
+                                                        {frame.status === 'hidden' ? <EyeNoneIcon /> : <EyeOpenIcon />}
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>{frame.status === 'hidden' ? 'Unhide Frame' : 'Hide Frame'}</TooltipContent>
+                                            </Tooltip>
 
-                                {frame.status === 'coming_soon' && (
-                                    <div className="absolute inset-x-0 bottom-4 flex justify-center z-20">
-                                        <span className="bg-indigo-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg shadow-indigo-200 border border-white/20 uppercase tracking-[0.2em]">
-                                            Coming Soon
-                                        </span>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="icon"
+                                                        className="h-10 w-10 bg-white/90 backdrop-blur-md rounded-xl shadow-lg"
+                                                        onClick={() => navigate(`/frames/edit/${frame.id}`, { state: { frame } })}
+                                                    >
+                                                        <Pencil1Icon />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Edit Frame</TooltipContent>
+                                            </Tooltip>
+
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="icon"
+                                                        className="h-10 w-10 rounded-xl shadow-lg"
+                                                        onClick={() => handleDelete(frame.id, frame.image_url)}
+                                                    >
+                                                        <TrashIcon />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>Delete Frame</TooltipContent>
+                                            </Tooltip>
+                                        </div>
+
+                                        {frame.status === 'hidden' && (
+                                            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-30 transition-all group-hover:opacity-0">
+                                                <div className="flex flex-col items-center gap-2">
+                                                    <Badge variant="destructive" className="px-4 py-1.5 shadow-xl border-none font-black tracking-widest animate-pulse">
+                                                        HIDDEN
+                                                    </Badge>
+                                                    <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">Private to Admin</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {frame.status === 'coming_soon' && (
+                                            <div className="absolute inset-0 bg-slate-900/5 backdrop-blur-[2px] flex items-center justify-center z-20">
+                                                <Badge variant="secondary" className="bg-white/90 text-slate-900 border-none px-4 py-1.5 shadow-xl">
+                                                    Coming Soon
+                                                </Badge>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
 
-                            <div className="px-2 pt-6 pb-2">
-                                <div className="flex flex-col gap-1 mb-6">
-                                    <h3 className="font-black text-slate-900 text-xl leading-tight truncate" title={frame.name}>{frame.name}</h3>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${frame.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`}></div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            {frame.status.replace('_', ' ')} • {new Date(frame.created_at).toLocaleDateString()}
-                                        </p>
+                                    <div className="pt-6 pb-2 px-1 flex flex-col flex-1">
+                                        <div className="mb-6">
+                                            <h3 className="font-black text-slate-900 text-xl leading-tight truncate" title={frame.name}>{frame.name}</h3>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <div className={cn(
+                                                    "w-1.5 h-1.5 rounded-full",
+                                                    frame.status === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 
+                                                    frame.status === 'hidden' ? 'bg-red-500' : 'bg-slate-300'
+                                                )} />
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">
+                                                    {frame.status.replace('_', ' ')} • {new Date(frame.created_at).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            onClick={() => toggleStatus(frame)}
+                                            variant={frame.status === 'active' ? "outline" : "kala"}
+                                            disabled={frame.status === 'hidden'}
+                                            className={cn(
+                                                "mt-auto w-full text-[10px] uppercase font-black tracking-widest",
+                                                frame.status === 'active' ? "border-emerald-100 text-emerald-600 hover:bg-emerald-50" : "",
+                                                frame.status === 'hidden' ? "opacity-20 cursor-not-allowed" : ""
+                                            )}
+                                        >
+                                            {frame.status === 'active' ? 'PAUSE DISPLAY' : 
+                                             frame.status === 'hidden' ? 'UNHIDE TO SET LIVE' : 'SET AS LIVE'}
+                                        </Button>
                                     </div>
-                                </div>
-
-                                <button
-                                    onClick={() => toggleStatus(frame)}
-                                    className={`w-full py-3 rounded-2xl font-bold text-[11px] tracking-wider transition-all active:scale-95 ${frame.status === 'active'
-                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100'
-                                        : 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700'
-                                        }`}
-                                >
-                                    {frame.status === 'active' ? 'PAUSE DISPLAY' : 'SET AS LIVE'}
-                                </button>
-                            </div>
-                        </motion.div>
-                    ))}
+                                </Card>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
 
                     {frames.length === 0 && (
-                        <div className="col-span-full py-24 flex flex-col items-center justify-center text-slate-400 bg-white/50 backdrop-blur-sm border-2 border-dashed border-slate-100 rounded-[40px] gap-4">
-                            <Icons.SquaresFour size={48} weight="duotone" />
+                        <div className="col-span-full py-24 flex flex-col items-center justify-center text-slate-400 bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] gap-6">
+                            <motion.div 
+                                animate={{ rotate: [0, 5, -5, 0] }}
+                                transition={{ repeat: Infinity, duration: 4 }}
+                                className="w-20 h-20 bg-slate-50 flex items-center justify-center rounded-[2rem] text-slate-200"
+                            >
+                                <ExclamationTriangleIcon width={48} height={48} />
+                            </motion.div>
                             <div className="text-center">
                                 <p className="font-black text-slate-800 uppercase tracking-widest text-sm">Design Gallery Empty</p>
                                 <p className="text-xs font-bold text-slate-400 mt-1">Start by uploading your first photobooth frame.</p>
                             </div>
-                            <button
+                            <Button
                                 onClick={() => navigate('/frames/new')}
-                                className="mt-4 px-6 py-3 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-100 transition-all active:scale-95"
+                                variant="kala"
+                                className="px-8"
                             >
                                 Upload Now
-                            </button>
+                            </Button>
                         </div>
                     )}
                 </div>
