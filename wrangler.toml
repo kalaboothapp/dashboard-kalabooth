@@ -1,0 +1,6 @@
+name = "kala-admin"
+pages_build_output_dir = "dist"
+
+# Jalankan cron job setiap 3 hari sekali
+[triggers]
+crons = ["0 0 */3 * *"]
