@@ -1,0 +1,31 @@
+name: Supabase Keepalive
+
+on:
+  schedule:
+    - cron: "0 0 */2 * *"   # tiap 2 hari
+  workflow_dispatch:        # trigger manual kapan saja lewat GitHub UI
+
+env:
+  SUPABASE_URL: https://svvtjdynyczlrljembrj.supabase.co
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    environment: keepalive  # <--- pakai environment secret, bypass repo-level restriction
+    steps:
+      - name: Ping Supabase Keep-alive Function
+        run: |
+          curl -sf -X POST "${SUPABASE_URL}/rest/v1/rpc/_keepalive" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            && echo "✅ Supabase database keep-alive sukses" \
+            || { echo "❌ Keep-alive gagal!"; exit 1; }
+
+      - name: Report Status
+        if: always()
+        run: |
+          echo "Workflow selesai pada $(date -u)" 
+          echo "Next run dijadwalkan 2 hari lagi"
